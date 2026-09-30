@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { updateProfile } from "./actions";
 
 const inputClass =
@@ -10,15 +11,13 @@ type Props = {
   firstName: string;
   lastName: string;
   bio: string;
-  from: string;
 };
 
-export default function ProfileForm({ firstName, lastName, bio, from }: Props) {
-  const [state, formAction, pending] = useActionState(updateProfile, null);
+export default function ProfileForm({ firstName, lastName, bio }: Props) {
+  const [error, formAction, pending] = useActionState(updateProfile, null);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="from" value={from} />
       <label className="flex flex-col gap-1 text-sm">
         First name
         <input name="first_name" required defaultValue={firstName} className={inputClass} />
@@ -34,18 +33,22 @@ export default function ProfileForm({ firstName, lastName, bio, from }: Props) {
         <textarea name="bio" rows={3} defaultValue={bio} className={inputClass} />
       </label>
 
-      <button
-        disabled={pending}
-        className="rounded-full bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-      >
-        {pending ? "Saving…" : "Save"}
-      </button>
+      <div className="flex gap-3">
+        <Link
+          href="/profile"
+          className="flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        >
+          Cancel
+        </Link>
+        <button
+          disabled={pending}
+          className="flex-1 rounded-full bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+        >
+          {pending ? "Saving…" : "Save"}
+        </button>
+      </div>
 
-      {state && (
-        <p className={`text-center text-sm ${state.ok ? "text-green-600" : "text-red-600"}`}>
-          {state.message}
-        </p>
-      )}
+      {error && <p className="text-center text-sm text-red-600">{error}</p>}
     </form>
   );
 }

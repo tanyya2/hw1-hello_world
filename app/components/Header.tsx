@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import SignInButton from "./SignInButton";
-import ProfileLink from "./ProfileLink";
 
 export default async function Header() {
   const supabase = await createClient();
@@ -18,7 +17,9 @@ export default async function Header() {
       {user ? (
         <div className="flex items-center gap-4 text-sm">
           <span className="text-zinc-500">{user.email}</span>
-          <ProfileLink />
+          <Link href="/profile" className="hover:underline">
+            Profile
+          </Link>
           <form action={signOut}>
             <button className="rounded-full border border-zinc-300 px-4 py-2 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
               Sign out

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
-export type SaveState = { message: string; ok: boolean } | null;
+// Error message to show under the form, or null
+export type SaveState = string | null;
 
 export async function updateProfile(_prev: SaveState, formData: FormData): Promise<SaveState> {
   const firstName = String(formData.get("first_name") ?? "").trim();
@@ -15,9 +16,7 @@ export async function updateProfile(_prev: SaveState, formData: FormData): Promi
   const user = data?.claims;
   if (!user) redirect("/");
 
-  if (!firstName || !lastName) {
-    return { ok: false, message: "First and last name are required." };
-  }
+  if (!firstName || !lastName) return "First and last name are required.";
 
   const { error } = await supabase
     .from("profiles")
@@ -29,9 +28,7 @@ export async function updateProfile(_prev: SaveState, formData: FormData): Promi
     })
     .eq("id", user.sub);
 
-  if (error) return { ok: false, message: error.message };
+  if (error) return error.message;
 
-  // Go back to the page the user came from (only paths inside this site)
-  const from = String(formData.get("from") ?? "/");
-  redirect(from.startsWith("/") && !from.startsWith("//") ? from : "/");
+  redirect("/profile");
 }
