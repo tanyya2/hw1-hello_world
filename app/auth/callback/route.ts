@@ -9,9 +9,17 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}/`);
+      // First name or last name missing → ask for them
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", data.user.id)
+        .single();
+
+      const hasName = profile?.first_name && profile?.last_name;
+      return NextResponse.redirect(`${origin}${hasName ? "/" : "/welcome"}`);
     }
     message = error.message;
   }
