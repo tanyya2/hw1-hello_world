@@ -2,8 +2,18 @@ import type { Place } from "./geoapify";
 import { CATEGORIES, type Category } from "./nyc";
 
 // Server-only: reads the API key.
-export const MODEL = "gemini-2.5-flash";
-const GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const GEMINI = "https://generativelanguage.googleapis.com/v1beta/models";
+
+// Free-tier limits are small and per model (e.g. 20 requests/day), and Google
+// Search lookups have their own daily limit. When one is used up we fall back
+// to the next model. `thinkingOff` skips extended reasoning (much faster);
+// the lite model doesn't accept that setting.
+const MODELS = [
+  { name: "gemini-2.5-flash", thinkingOff: true },
+  { name: "gemini-3-flash-preview", thinkingOff: true },
+  { name: "gemini-flash-latest", thinkingOff: true },
+  { name: "gemini-flash-lite-latest", thinkingOff: false },
+];
 
 export type PlanRequest = {
   start: string;
@@ -21,7 +31,8 @@ export type GeminiPlan = {
 
 // `required`: categories the user picked. Every plan has at least 3 different places:
 // 1–2 categories → 3 places from them; 3+ → one per category; none → 3–4 from different categories.
-export function buildPrompt(request: PlanRequest, places: Place[], required: Category[]) {
+// `search`: whether Gemini can use Google Search (for ratings) on this request.
+export function buildPrompt(request: PlanRequest, places: Place[], required: Category[], search: boolean) {
   // Places grouped under category headings, numbered across the whole list
   const list = (Object.keys(CATEGORIES) as Category[])
     .filter((category) => places.some((place) => place.category === category))
@@ -61,45 +72,51 @@ Nearby places (choose only from these, by number):
 ${list}
 
 ${pick} Choose the places that best fit what it's for, the time and the budget, and put them in a sensible walking order.
-Use Google Search to look up only the places you pick (one search per place): its Google rating and whether it's still open.
-If a pick has closed or is poorly rated, swap it for another place from the same category.
+${
+    search
+      ? `Use Google Search to look up only the places you pick (one search per place): its Google rating and whether it's still open.
+If a pick has closed or is poorly rated, swap it for another place from the same category.`
+      : "Set every rating to null."
+  }
 
 Reply with only JSON, no other text:
 {"title": string (max 8 words), "stops": [{"place": number, "minutes": number, "rating": number or null (Google rating), "note": string (one short sentence: what to do there)}], "tip": string (one short practical tip)}`;
 }
 
-// Gemini is temporarily overloaded (503) or over the per-minute limit (429)
+// Every model refused: out of free requests for today, or overloaded
 export class GeminiBusyError extends Error {}
 
-// Gemini with Google Search grounding. Returns its text and the search
-// suggestions Google requires us to show alongside grounded answers.
-export async function askGemini(prompt: string) {
-  const request = () =>
-    fetch(GEMINI, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        tools: [{ google_search: {} }],
-        // Skip extended reasoning: much faster, and planning from a short list doesn't need it
-        generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    });
+// Tries each model with Google Search first (real ratings), then each without.
+// Refusals come back in well under a second, so falling through is quick.
+// Returns the reply, the prompt and model actually used, and the search
+// suggestions Google requires us to show alongside answers grounded in Search.
+export async function askGemini(promptFor: (search: boolean) => string) {
+  const failures: string[] = [];
+  for (const search of [true, false]) {
+    const prompt = promptFor(search);
+    for (const model of MODELS) {
+      const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          ...(search && { tools: [{ google_search: {} }] }),
+          ...(model.thinkingOff && { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
+        }),
+      });
+      if (!res.ok) {
+        failures.push(`${model.name}${search ? " +search" : ""}: ${res.status}`);
+        continue;
+      }
 
-  let res = await request();
-  // Busy errors usually clear within a couple of seconds — retry once
-  if (res.status === 429 || res.status >= 500) {
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    res = await request();
+      const data = await res.json();
+      const candidate = data.candidates?.[0];
+      const text: string = (candidate?.content?.parts ?? []).map((part: { text?: string }) => part.text ?? "").join("");
+      const searchSuggestions: string | null = candidate?.groundingMetadata?.searchEntryPoint?.renderedContent ?? null;
+      return { text, searchSuggestions, prompt, model: model.name };
+    }
   }
-  if (res.status === 429 || res.status >= 500) throw new GeminiBusyError(`Gemini ${res.status}: ${await res.text()}`);
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-
-  const data = await res.json();
-  const candidate = data.candidates?.[0];
-  const text: string = (candidate?.content?.parts ?? []).map((part: { text?: string }) => part.text ?? "").join("");
-  const searchSuggestions: string | null = candidate?.groundingMetadata?.searchEntryPoint?.renderedContent ?? null;
-  return { text, searchSuggestions };
+  throw new GeminiBusyError(`All Gemini models refused: ${failures.join(", ")}`);
 }
 
 // Pull the JSON out of Gemini's reply (it sometimes wraps it in ```json fences)

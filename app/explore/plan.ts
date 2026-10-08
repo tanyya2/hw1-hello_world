@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { fetchNearby, type Place } from "./geoapify";
-import { GeminiBusyError, MODEL, askGemini, buildPrompt, parsePlan, type GeminiPlan } from "./gemini";
+import { GeminiBusyError, askGemini, buildPrompt, parsePlan, type GeminiPlan } from "./gemini";
 import { BUDGETS, CATEGORIES, HOURS, RADII_MILES, inNyc, type Category } from "./nyc";
 
 // Gemini picks from at most this many nearby places
@@ -99,13 +99,13 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
     const places = (await fetchNearby(categories, lat, lon, radiusMiles, perCategory)).slice(0, MAX_PLACES);
     if (places.length === 0) return { error: "Nothing found nearby. Try a bigger distance or other categories." };
 
-    const prompt = buildPrompt({ start: label, purpose, hours, budget }, places, picked);
+    const promptFor = (search: boolean) => buildPrompt({ start: label, purpose, hours, budget }, places, picked, search);
 
     // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
-    let reply = await askGemini(prompt);
+    let reply = await askGemini(promptFor);
     let result = checkStops(parsePlan(reply.text, places.length), places, picked);
     if (!result) {
-      reply = await askGemini(prompt);
+      reply = await askGemini(promptFor);
       result = checkStops(parsePlan(reply.text, places.length), places, picked);
     }
     if (!result) {
@@ -139,8 +139,9 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
         neighborhood: label,
         inputs: { radiusMiles, categories: picked, purpose, hours, budget },
         places,
-        prompt,
-        model: MODEL,
+        // The prompt and model that actually produced this plan
+        prompt: reply.prompt,
+        model: reply.model,
         content: JSON.stringify(content),
       })
       .select("id")
@@ -153,7 +154,7 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
     return { plan: { id: saved.id, ...content, hours, budget } };
   } catch (err) {
     console.error("generatePlan:", err);
-    if (err instanceof GeminiBusyError) return { error: "The AI is busy right now. Try again in a minute." };
+    if (err instanceof GeminiBusyError) return { error: "The AI is out of free requests for today. Try again tomorrow." };
     return { error: "Couldn't make a plan right now. Try again in a moment." };
   }
 }
