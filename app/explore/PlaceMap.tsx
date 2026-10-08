@@ -5,6 +5,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Spot } from "./geocode";
 import type { Place } from "./geoapify";
+import { formatMiles } from "./nyc";
 
 const METERS_PER_MILE = 1609.34;
 
@@ -73,7 +74,7 @@ export default function PlaceMap({ center, radiusMiles, places }: Props) {
     places.forEach((place, i) => {
       // Text node, not HTML: place names come from an outside source
       const tooltip = document.createElement("span");
-      tooltip.textContent = `${place.name} · ${place.miles} mi`;
+      tooltip.textContent = `${place.name} · ${formatMiles(place.miles)}`;
 
       L.marker([place.lat, place.lon], {
         icon: L.divIcon({

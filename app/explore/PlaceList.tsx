@@ -1,5 +1,5 @@
 import type { Place } from "./geoapify";
-import { CATEGORIES } from "./nyc";
+import { CATEGORIES, formatMiles } from "./nyc";
 
 export default function PlaceList({ places }: { places: Place[] }) {
   return (
@@ -13,7 +13,7 @@ export default function PlaceList({ places }: { places: Place[] }) {
               {[CATEGORIES[place.category].label, place.cuisine, place.address].filter(Boolean).join(" · ")}
             </span>
           </span>
-          <span className="shrink-0 pt-0.5 text-sm text-zinc-500">{place.miles} mi</span>
+          <span className="shrink-0 pt-0.5 text-sm text-zinc-500">{formatMiles(place.miles)}</span>
         </li>
       ))}
     </ol>

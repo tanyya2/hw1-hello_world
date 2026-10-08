@@ -10,9 +10,14 @@ export default async function Header() {
 
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
-      <Link href="/" className="font-semibold">
-        Home
-      </Link>
+      <nav className="flex items-center gap-4">
+        <Link href="/" className="font-semibold">
+          Home
+        </Link>
+        <Link href="/plans" className="text-sm hover:underline">
+          Plans
+        </Link>
+      </nav>
 
       {user ? (
         <div className="flex items-center gap-4 text-sm">

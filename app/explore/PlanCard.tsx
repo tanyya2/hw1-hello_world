@@ -1,14 +1,25 @@
-import { CATEGORIES } from "./nyc";
+import { CATEGORIES, formatMiles } from "./nyc";
 import type { Plan } from "./plan";
 
-export default function PlanCard({ plan }: { plan: Plan }) {
+type Props = {
+  plan: Plan;
+  // e.g. "Morningside Heights · by Sam K. · Oct 8"
+  meta?: React.ReactNode;
+  // e.g. vote buttons
+  children?: React.ReactNode;
+};
+
+export default function PlanCard({ plan, meta, children }: Props) {
   return (
     <article className="flex flex-col gap-4 rounded-2xl border border-zinc-200 p-5 text-left dark:border-zinc-800">
-      <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold">{plan.title}</h2>
-        <span className="text-sm text-zinc-500">
-          {plan.hours}h · {plan.budget}
-        </span>
+      <header className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-semibold">{plan.title}</h2>
+          <span className="text-sm text-zinc-500">
+            {plan.hours}h · {plan.budget}
+          </span>
+        </div>
+        {meta && <p className="text-xs text-zinc-500">{meta}</p>}
       </header>
 
       <ol className="flex flex-col gap-4">
@@ -24,7 +35,7 @@ export default function PlanCard({ plan }: { plan: Plan }) {
               </p>
               <p className="text-sm">{stop.note}</p>
               <p className="text-xs text-zinc-500">
-                {[CATEGORIES[stop.category].label, stop.address, `${stop.miles} mi`, `~${stop.minutes} min`]
+                {[CATEGORIES[stop.category].label, stop.address, formatMiles(stop.miles), `~${stop.minutes} min`]
                   .filter(Boolean)
                   .join(" · ")}
               </p>
@@ -45,6 +56,8 @@ export default function PlanCard({ plan }: { plan: Plan }) {
           className="h-14 w-full border-0"
         />
       )}
+
+      {children}
     </article>
   );
 }

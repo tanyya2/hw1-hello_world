@@ -22,6 +22,11 @@ export const CATEGORIES = {
 
 export type Category = keyof typeof CATEGORIES;
 
+// 0.04 → "< 0.1 mi", 0.3 → "0.3 mi"
+export function formatMiles(miles: number) {
+  return miles < 0.1 ? "< 0.1 mi" : `${miles} mi`;
+}
+
 // Plan options
 export const HOURS = [1, 2, 3] as const;
 export const BUDGETS = ["$", "$$", "$$$"] as const;

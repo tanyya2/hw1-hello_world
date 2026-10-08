@@ -6,6 +6,7 @@ import Chip from "@/app/components/Chip";
 import LocationPicker from "./LocationPicker";
 import PlaceList from "./PlaceList";
 import PlanCard from "./PlanCard";
+import VoteButtons from "@/app/plans/VoteButtons";
 import { BUDGETS, CATEGORIES, HOURS, RADII_MILES, type Category } from "./nyc";
 import { findPlaces, type PlacesResult } from "./places";
 import { generatePlan, type Plan, type PlanResult } from "./plan";
@@ -210,7 +211,11 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
 
       {error && <p role="alert" className="text-sm text-zinc-600 dark:text-zinc-400">{error}</p>}
 
-      {mode === "plan" && plan && <PlanCard plan={plan} />}
+      {mode === "plan" && plan && (
+        <PlanCard plan={plan}>
+          <VoteButtons key={plan.id} planId={plan.id} initial={{ up: 0, down: 0, mine: null }} signedIn />
+        </PlanCard>
+      )}
 
       {mode === "places" && places && places.length === 0 && (
         <p className="text-sm text-zinc-500">Nothing found nearby. Try a bigger distance or other categories.</p>

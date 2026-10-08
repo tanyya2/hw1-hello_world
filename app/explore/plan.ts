@@ -29,16 +29,16 @@ export type PlanStop = {
   note: string;
 };
 
-export type Plan = {
-  id: number;
+// Saved as JSON in plans.content
+export type PlanContent = {
   title: string;
   stops: PlanStop[];
   tip: string;
-  hours: number;
-  budget: string;
   // Google's search suggestions (HTML), required next to grounded answers
   searchSuggestions: string | null;
 };
+
+export type Plan = PlanContent & { id: number; hours: number; budget: string };
 
 export type PlanResult = { plan: Plan } | { error: string };
 
@@ -112,7 +112,6 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
       console.error("generatePlan: unusable Gemini reply", reply.text);
       return { error: "Couldn't make a plan this time. Try again." };
     }
-    const { searchSuggestions } = reply;
 
     const stops: PlanStop[] = result.stops.map((stop) => {
       const place = places[stop.place - 1];
@@ -126,7 +125,12 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
         note: stop.note,
       };
     });
-    const content = { title: result.title, stops, tip: result.tip };
+    const content: PlanContent = {
+      title: result.title,
+      stops,
+      tip: result.tip,
+      searchSuggestions: reply.searchSuggestions,
+    };
 
     // RLS: user_id defaults to the logged-in user, and users can only insert their own plans
     const { data: saved, error } = await supabase
@@ -146,7 +150,7 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
       return { error: "Couldn't save your plan. Try again." };
     }
 
-    return { plan: { id: saved.id, ...content, hours, budget, searchSuggestions } };
+    return { plan: { id: saved.id, ...content, hours, budget } };
   } catch (err) {
     console.error("generatePlan:", err);
     if (err instanceof GeminiBusyError) return { error: "The AI is busy right now. Try again in a minute." };

@@ -26,7 +26,9 @@ function round(n: number) {
 // "Morningside Heights, Manhattan" — suburb is the borough in NYC
 function labelFor(address: NominatimAddress | undefined, fallback: string) {
   if (!address) return fallback;
-  const parts = [address.neighbourhood ?? address.quarter, address.suburb].filter(
+  // Some areas only have a district name like "Manhattan Community Board 4" — skip those
+  const area = [address.neighbourhood, address.quarter].find((name) => name && !/community board/i.test(name));
+  const parts = [area, address.suburb].filter(
     (part, i, all): part is string => !!part && all.indexOf(part) === i
   );
   return parts.join(", ") || fallback;
