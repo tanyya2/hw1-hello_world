@@ -4,15 +4,15 @@ Find real places near you and get an AI plan built from them. Logged-in users ra
 
 ## Flow
 
-1. **Where** — use my location or type a neighborhood. Distance: 1, 2 or 3 miles.
-2. **What** — pick categories: Coffee, Restaurants, Bars, Museums, Parks, Bookstores, Dessert.
-3. **Places** — closest 10, 20 or 50 places, as a list or a map with numbered pins. User can tick the places they want.
-4. **Plan** — logged in only. What for, time, budget, mood → Gemini makes a plan. Uses the ticked places; if none are ticked, Gemini picks the best ones from the closest 20, using Google Search to check ratings and reviews. Saved with its prompt.
-5. **Rate** — 👍 / 👎 on plans. Logged in only, one vote per plan.
+Logged in only. Shared: **Where** — use my location or type a neighborhood; distance 1, 2 or 3 miles. Then pick a mode:
+
+1. **Find places** — pick categories (Coffee, Restaurants, Bars, Museums, Parks, Bookstores, Dessert). See the closest 10, 20 or 50 as a list or a map with numbered pins.
+2. **Make a plan** — what for (including the vibe), time (1–3h), budget ($–$$$), optional categories. The server gets up to 30 nearby places; Gemini picks at least 3 different places: 3 from the picked categories if 1–2 are picked, one per category if 3+, or 3–4 from different categories if none, checks Google ratings with Search, and writes the plan. Saved to `plans` with its prompt.
+3. **Rate** — 👍 / 👎 on plans, one vote per user per plan.
 
 ## Tech
 
 - Neighborhood search: OpenStreetMap Nominatim (free).
 - Nearby places: Geoapify Places API (OpenStreetMap data, free plan, 3,000 requests/day, no card). Up to 50 closest per category.
 - Map: Leaflet with OpenStreetMap tiles shown in grayscale (free, no key).
-- Plans: Gemini `gemini-2.5-flash`.
+- Plans: Gemini `gemini-2.5-flash` with Google Search grounding, thinking off (~3–4 s). Google's search suggestions are shown under each plan, as required.

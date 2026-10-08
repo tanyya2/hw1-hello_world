@@ -4,34 +4,26 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Spot } from "./geocode";
-import type { Place } from "./places";
+import type { Place } from "./geoapify";
 
 const METERS_PER_MILE = 1609.34;
 
-// Numbered pins: outlined when not selected, filled black when selected
-const PIN = "flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 text-xs font-semibold shadow";
-const PIN_OFF = `${PIN} border-black bg-white text-black`;
-const PIN_ON = `${PIN} border-white bg-black text-white`;
+// Numbered pins matching the list
+const PIN =
+  "flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-white bg-black text-xs font-semibold text-white shadow";
 
 type Props = {
   center: Spot;
   radiusMiles: number;
   places: Place[];
-  selected: Set<string>;
-  onToggle: (id: string) => void;
 };
 
 // Leaflet touches `window`, so this component is loaded only in the browser
-export default function PlaceMap({ center, radiusMiles, places, selected, onToggle }: Props) {
+export default function PlaceMap({ center, radiusMiles, places }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const onToggleRef = useRef(onToggle);
   const meters = radiusMiles * METERS_PER_MILE;
-
-  useEffect(() => {
-    onToggleRef.current = onToggle;
-  }, [onToggle]);
 
   // Create the map once
   useEffect(() => {
@@ -79,7 +71,6 @@ export default function PlaceMap({ center, radiusMiles, places, selected, onTogg
     }).addTo(layer);
 
     places.forEach((place, i) => {
-      const on = selected.has(place.id);
       // Text node, not HTML: place names come from an outside source
       const tooltip = document.createElement("span");
       tooltip.textContent = `${place.name} · ${place.miles} mi`;
@@ -87,18 +78,16 @@ export default function PlaceMap({ center, radiusMiles, places, selected, onTogg
       L.marker([place.lat, place.lon], {
         icon: L.divIcon({
           className: "",
-          html: `<div class="${on ? PIN_ON : PIN_OFF}">${i + 1}</div>`,
+          html: `<div class="${PIN}">${i + 1}</div>`,
           iconSize: [26, 26],
           iconAnchor: [13, 13],
         }),
-        zIndexOffset: on ? 1000 : 0,
         keyboard: true,
       })
         .bindTooltip(tooltip, { direction: "top", offset: [0, -14] })
-        .on("click", () => onToggleRef.current(place.id))
         .addTo(layer);
     });
-  }, [center.lat, center.lon, meters, places, selected]);
+  }, [center.lat, center.lon, meters, places]);
 
   return <div ref={containerRef} className="relative z-0 h-96 w-full overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800" />;
 }

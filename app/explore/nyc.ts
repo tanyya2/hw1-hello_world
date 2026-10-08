@@ -21,3 +21,7 @@ export const CATEGORIES = {
 } as const;
 
 export type Category = keyof typeof CATEGORIES;
+
+// Plan options
+export const HOURS = [1, 2, 3] as const;
+export const BUDGETS = ["$", "$$", "$$$"] as const;
