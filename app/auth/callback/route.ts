@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/server";
 // letter avatar (~1 KB) — a real photo is many times bigger. Returns a 256px URL
 // for a real photo, or null.
 async function realPhoto(url: string) {
+  // Users can edit their own account data, so only ever fetch from Google's image server
+  if (!url.startsWith("https://lh3.googleusercontent.com/")) return null;
   const sized = url.replace(/=s\d+-c$/, "=s256-c");
   try {
     const res = await fetch(sized);

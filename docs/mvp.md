@@ -15,4 +15,4 @@ Logged in only. Shared: **Where** — use my location or type a neighborhood; di
 - Neighborhood search: OpenStreetMap Nominatim (free).
 - Nearby places: Geoapify Places API (OpenStreetMap data, free plan, 3,000 requests/day, no card). Up to 50 closest per category.
 - Map: Leaflet with OpenStreetMap tiles shown in grayscale (free, no key).
-- Plans: Gemini `gemini-2.5-flash` with Google Search grounding, thinking off (~3–4 s). Google's search suggestions are shown under each plan, as required.
+- Plans: Gemini `gemini-2.5-flash` with Google Search grounding, thinking off (~3–4 s). Free tier is ~20 requests/day per model, so it falls back to other Gemini models, then to no Search (no ratings). Each plan saves the model and prompt actually used. Google's search suggestions are shown under each plan, as required.

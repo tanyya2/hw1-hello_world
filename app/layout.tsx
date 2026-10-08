@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Home",
-  description: "Hello World app with Google sign-in",
+  title: "What's around me in NYC",
+  description: "Find places near you in NYC and get an AI-made plan for your time",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
