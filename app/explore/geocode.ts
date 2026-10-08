@@ -1,5 +1,8 @@
 "use server";
 
+import { createClient } from "@/utils/supabase/server";
+import { NYC, inNyc } from "./nyc";
+
 // Place names come from OpenStreetMap's free geocoder (Nominatim).
 // Usage policy: identify the app, max 1 request per second.
 const NOMINATIM = "https://nominatim.openstreetmap.org";
@@ -8,8 +11,6 @@ const HEADERS = {
   "Accept-Language": "en",
 };
 
-// The app covers NYC only
-const NYC = { west: -74.26, north: 40.92, east: -73.7, south: 40.49 };
 const NYC_VIEWBOX = `${NYC.west},${NYC.north},${NYC.east},${NYC.south}`;
 
 export type Spot = { lat: number; lon: number; label: string };
@@ -22,10 +23,6 @@ function round(n: number) {
   return Math.round(n * 1000) / 1000;
 }
 
-function inNyc(lat: number, lon: number) {
-  return lat >= NYC.south && lat <= NYC.north && lon >= NYC.west && lon <= NYC.east;
-}
-
 // "Morningside Heights, Manhattan" — suburb is the borough in NYC
 function labelFor(address: NominatimAddress | undefined, fallback: string) {
   if (!address) return fallback;
@@ -36,6 +33,10 @@ function labelFor(address: NominatimAddress | undefined, fallback: string) {
 }
 
 export async function reverseGeocode(lat: number, lon: number): Promise<LookupResult> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) return { error: "Sign in to search." };
+
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
     return { error: "That location doesn't look right." };
   }
@@ -60,6 +61,10 @@ export async function reverseGeocode(lat: number, lon: number): Promise<LookupRe
 }
 
 export async function searchNeighborhood(query: string): Promise<LookupResult> {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) return { error: "Sign in to search." };
+
   const q = query.trim();
   if (!q) return { error: "Type a neighborhood or address." };
   if (q.length > 100) return { error: "That's a bit long — try just the neighborhood." };

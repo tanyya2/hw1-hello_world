@@ -1,6 +1,12 @@
-import LocationPicker from "./location/LocationPicker";
+import { createClient } from "@/utils/supabase/server";
+import SignInButton from "./components/SignInButton";
+import Explorer from "./explore/Explorer";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
+
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-10 px-4 py-12 text-center">
       <div className="flex flex-col gap-3">
@@ -9,7 +15,15 @@ export default function Home() {
           Find places near you and get a plan
         </p>
       </div>
-      <LocationPicker />
+
+      {/* Searching is for logged-in users only (also enforced on the server) */}
+      {user ? (
+        <Explorer />
+      ) : (
+        <div className="flex justify-center">
+          <SignInButton />
+        </div>
+      )}
     </main>
   );
 }
