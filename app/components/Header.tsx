@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
-import { signOut } from "@/app/auth/actions";
+import ProfileMenu from "./ProfileMenu";
 import SignInButton from "./SignInButton";
 
 export default async function Header() {
@@ -8,32 +8,24 @@ export default async function Header() {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", user.sub).single()
+    : { data: null };
+  const initials =
+    `${profile?.first_name?.[0] ?? ""}${profile?.last_name?.[0] ?? ""}`.toUpperCase() || "?";
+
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
-      <nav className="flex items-center gap-4">
+      <nav className="flex items-center gap-6">
         <Link href="/" className="font-semibold">
           Home
         </Link>
-        <Link href="/plans" className="text-sm hover:underline">
+        <Link href="/plans" className="font-semibold">
           Plans
         </Link>
       </nav>
 
-      {user ? (
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-zinc-500">{user.email}</span>
-          <Link href="/profile" className="hover:underline">
-            Profile
-          </Link>
-          <form action={signOut}>
-            <button className="rounded-full border border-zinc-300 px-4 py-2 hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
-              Sign out
-            </button>
-          </form>
-        </div>
-      ) : (
-        <SignInButton />
-      )}
+      {user ? <ProfileMenu avatarUrl={profile?.avatar_url ?? null} initials={initials} /> : <SignInButton />}
     </header>
   );
 }
