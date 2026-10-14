@@ -70,8 +70,8 @@ export default async function Memories({ searchParams }: PageProps<"/captions">)
         <p className="text-center text-zinc-500">
           {mine ? "You haven't added any photos yet. " : "No captions here yet. "}
           {userId && (
-            <Link href="/plans?view=mine" className="underline underline-offset-4 hover:text-black dark:hover:text-white">
-              Add a photo to one of your plans
+            <Link href="/plans" className="underline underline-offset-4 hover:text-black dark:hover:text-white">
+              Add a photo to a plan you went on
             </Link>
           )}
         </p>

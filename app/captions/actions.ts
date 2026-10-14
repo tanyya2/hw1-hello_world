@@ -66,8 +66,8 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
 
   try {
     // RLS also enforces both of these; checking first avoids wasting an AI request
-    const { data: plan } = await supabase.from("plans").select("id").eq("id", planId).eq("user_id", userId).maybeSingle();
-    if (!plan) return fail("You can only add photos to your own plans.");
+    const { data: plan } = await supabase.from("plans").select("id").eq("id", planId).maybeSingle();
+    if (!plan) return fail("This plan doesn't exist anymore.");
     const wait = minutesUntilNext(await lastMemoryAt(supabase, userId));
     if (wait > 0) return fail(`You can add 1 photo per hour. Try again in ${wait} min.`);
 
@@ -95,8 +95,8 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
       return fail("Couldn't write a caption for this one. Try another photo.");
     }
 
-    // RLS: user_id defaults to the logged-in user; users can only add memories
-    // to their own plans, 1 per hour
+    // RLS: user_id defaults to the logged-in user; users can add memories to any plan,
+    // 1 per hour
     const { data: saved, error } = await supabase
       .from("memories")
       .insert({ plan_id: planId, photo_url: photoUrl, caption, prompt: reply.prompt, model: reply.model })

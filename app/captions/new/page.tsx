@@ -9,7 +9,7 @@ import { minutesUntilNext } from "../prompt";
 
 export const metadata: Metadata = { title: "Add a photo" };
 
-// Add a photo to one of your own plans: /captions/new?plan=123
+// Add a photo to a plan you went on (anyone's): /captions/new?plan=123
 export default async function NewMemory({ searchParams }: PageProps<"/captions/new">) {
   const params = await searchParams;
   const planId = Number.parseInt(String(params.plan ?? ""), 10);
@@ -20,7 +20,7 @@ export default async function NewMemory({ searchParams }: PageProps<"/captions/n
   if (!userId) redirect("/");
 
   const { data: plan } = Number.isInteger(planId)
-    ? await supabase.from("plans").select("id, content").eq("id", planId).eq("user_id", userId).maybeSingle()
+    ? await supabase.from("plans").select("id, content").eq("id", planId).maybeSingle()
     : { data: null };
   const wait = minutesUntilNext(await lastMemoryAt(supabase, userId));
 
@@ -30,16 +30,16 @@ export default async function NewMemory({ searchParams }: PageProps<"/captions/n
         <h1 className="text-3xl font-semibold tracking-tight">Add a photo</h1>
         <p className="text-zinc-500">
           {plan
-            ? `From your plan “${(JSON.parse(plan.content) as PlanContent).title}”. The AI writes a caption for it.`
-            : "You can only add photos to your own plans."}
+            ? `From the plan “${(JSON.parse(plan.content) as PlanContent).title}”. The AI writes a caption for it.`
+            : "This plan doesn't exist anymore."}
         </p>
       </header>
 
       {plan ? (
         <MemoryMaker userId={userId} planId={plan.id} wait={wait} />
       ) : (
-        <Link href="/plans?view=mine" className="text-center underline underline-offset-4">
-          See my plans
+        <Link href="/plans" className="text-center underline underline-offset-4">
+          See plans
         </Link>
       )}
     </main>

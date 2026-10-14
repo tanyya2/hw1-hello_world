@@ -16,7 +16,7 @@ const TAB_OFF = `${TAB} text-zinc-600 hover:text-black dark:text-zinc-400 dark:h
 const PAGER = "rounded-full border border-zinc-300 px-4 py-1.5 text-sm transition hover:border-black dark:border-zinc-700 dark:hover:border-white";
 
 // Plans newest first, 10 per page. "Everyone" is public; "My plans" needs login.
-// Only logged-in users can vote.
+// Only logged-in users can vote and add photos (to anyone's plan they went on).
 export default async function Plans({ searchParams }: PageProps<"/plans">) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -29,7 +29,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
   let query = supabase
     .from("plans")
     .select(
-      "id, created_at, user_id, neighborhood, inputs, content, profiles(first_name, last_name), votes(user_id, value)",
+      "id, created_at, neighborhood, inputs, content, profiles(first_name, last_name), votes(user_id, value)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -86,7 +86,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
             meta={[row.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              {row.user_id === userId && (
+              {userId && (
                 <Link href={`/captions/new?plan=${row.id}`} className={PAGER}>
                   Add a photo
                 </Link>
