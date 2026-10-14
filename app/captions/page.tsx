@@ -4,9 +4,14 @@ import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import VoteButtons from "@/app/plans/VoteButtons";
 import { tally } from "@/app/plans/votes";
+import CreateMemoryButton from "@/app/memories/CreateMemoryButton";
+import { budgetReached, hoursUntilNextMemory } from "@/app/memories/limits";
 import MemoryCard from "./MemoryCard";
 
 export const metadata: Metadata = { title: "Captions" };
+
+// Creating a memory (an AI illustration) takes ~45 s
+export const maxDuration = 120;
 
 const PER_PAGE = 10;
 
@@ -31,7 +36,7 @@ export default async function Memories({ searchParams }: PageProps<"/captions">)
     .from("memories")
     // The author's profile (not the voters', which memory_votes also links to)
     .select(
-      "id, created_at, photo_url, caption, plans(neighborhood, content), profiles!memories_user_id_fkey(first_name, last_name), memory_votes(user_id, value)",
+      "id, created_at, user_id, photo_url, caption, plans(neighborhood, content), profiles!memories_user_id_fkey(first_name, last_name), memory_votes(user_id, value)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -40,6 +45,12 @@ export default async function Memories({ searchParams }: PageProps<"/captions">)
   const { data: rows, count, error } = await query;
   if (error) console.error("memories:", error);
   const pages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE));
+
+  // For the Create a memory button on the user's own photos
+  const hasOwn = !!userId && !!rows?.some((row) => row.user_id === userId);
+  const [memoryWait, paused] = hasOwn
+    ? await Promise.all([hoursUntilNextMemory(supabase, userId), budgetReached(supabase)])
+    : [0, false];
 
   const href = (nextPage: number) => {
     const search = new URLSearchParams();
@@ -103,7 +114,12 @@ export default async function Memories({ searchParams }: PageProps<"/captions">)
             caption={row.caption}
             meta={[title, plan?.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
           >
-            <VoteButtons kind="memory" id={row.id} initial={tally(row.memory_votes, userId)} signedIn={!!userId} />
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              {row.user_id === userId && <CreateMemoryButton memoryId={row.id} wait={memoryWait} paused={paused} />}
+              <div className="flex-1">
+                <VoteButtons kind="memory" id={row.id} initial={tally(row.memory_votes, userId)} signedIn={!!userId} />
+              </div>
+            </div>
           </MemoryCard>
         );
       })}
