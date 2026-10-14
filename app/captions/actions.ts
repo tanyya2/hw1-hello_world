@@ -4,7 +4,8 @@ import { createClient } from "@/utils/supabase/server";
 import { GeminiBusyError, askGemini } from "@/app/explore/gemini";
 import { lastMemoryAt } from "./limit";
 import { isPhotoAllowed } from "./moderation";
-import { MAX_PHOTO_BYTES, PHOTO_TYPES, buildCaptionPrompt, minutesUntilNext, parseCaption } from "./prompt";
+import { hasLocation } from "./location";
+import { MAX_PHOTO_BYTES, buildCaptionPrompt, minutesUntilNext, parseCaption } from "./prompt";
 
 export type Memory = { id: number; photoUrl: string; caption: string };
 
@@ -52,8 +53,7 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
   if (!userId) return { error: "Sign in to add a photo." };
 
   // Only photos from the user's own folder, e.g. "<user id>/1760450000000.jpg"
-  const exts = Object.values(PHOTO_TYPES).join("|");
-  if (!Number.isInteger(planId) || typeof path !== "string" || !new RegExp(`^${userId}/\\d+\\.(${exts})$`).test(path)) {
+  if (!Number.isInteger(planId) || typeof path !== "string" || !new RegExp(`^${userId}/\\d+\\.jpg$`).test(path)) {
     return { error: "Invalid photo." };
   }
 
@@ -79,10 +79,13 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
       return fail("Couldn't read your photo. Try uploading it again.");
     }
     const photo = await res.blob();
-    if (!PHOTO_TYPES[photo.type] || photo.size > MAX_PHOTO_BYTES) {
-      return fail("Photos must be JPG, PNG or WebP, up to 5 MB.");
+    if (photo.type !== "image/jpeg" || photo.size > MAX_PHOTO_BYTES) {
+      return fail("Photos must be JPG, PNG or WebP, up to 20 MB.");
     }
-    const image = { mimeType: photo.type, data: Buffer.from(await photo.arrayBuffer()).toString("base64") };
+    const bytes = new Uint8Array(await photo.arrayBuffer());
+    // The app removes locations before uploading; this catches uploads that skipped it
+    if (hasLocation(bytes)) return fail("This photo still has its location in it. Please upload it through the app.");
+    const image = { mimeType: photo.type, data: Buffer.from(bytes).toString("base64") };
 
     if (!(await isPhotoAllowed(image))) {
       return fail("This photo can't be posted. Please pick a different one.");

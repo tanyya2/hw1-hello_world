@@ -1,9 +1,7 @@
-// Photos people can upload, and the file extension each is saved with
-export const PHOTO_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-};
+// Photos people can pick. The browser cleans each one (see cleanPhoto) and
+// uploads it as a JPEG of at most MAX_PHOTO_BYTES.
+export const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const MAX_PICKED_BYTES = 20 * 1024 * 1024;
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
 // Each user can add 1 photo per hour (also enforced by RLS)

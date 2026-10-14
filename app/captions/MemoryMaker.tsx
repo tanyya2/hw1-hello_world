@@ -5,7 +5,8 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { clearUnfinished, makeMemory, type Memory, type MemoryResult } from "./actions";
 import MemoryCard from "./MemoryCard";
-import { COOLDOWN_MS, MAX_PHOTO_BYTES, PHOTO_TYPES } from "./prompt";
+import { cleanPhoto } from "./cleanPhoto";
+import { COOLDOWN_MS, MAX_PHOTO_BYTES, MAX_PICKED_BYTES, PHOTO_TYPES } from "./prompt";
 
 const OFFLINE = "Something went wrong. Check your connection and try again.";
 
@@ -46,9 +47,8 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
     event.target.value = "";
     if (!file) return;
 
-    const ext = PHOTO_TYPES[file.type];
-    if (!ext || file.size > MAX_PHOTO_BYTES) {
-      setError("Photos must be JPG, PNG or WebP, up to 5 MB.");
+    if (!PHOTO_TYPES.includes(file.type) || file.size > MAX_PICKED_BYTES) {
+      setError("Photos must be JPG, PNG or WebP, up to 20 MB.");
       return;
     }
 
@@ -60,11 +60,24 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
         // Photos left by a failed attempt would block this upload
         await clearUnfinished();
 
+        // Photos are public, so remove hidden data like the GPS location first
+        let photo: Blob;
+        try {
+          photo = await cleanPhoto(file);
+        } catch {
+          setError("Couldn't read this photo. Try a different one.");
+          return;
+        }
+        if (photo.size > MAX_PHOTO_BYTES) {
+          setError("This photo is too big. Try a different one.");
+          return;
+        }
+
         // The photo goes to Storage first; the server reads it from there
-        const path = `${userId}/${Date.now()}.${ext}`;
+        const path = `${userId}/${Date.now()}.jpg`;
         const { error: uploadError } = await createClient()
           .storage.from("memories")
-          .upload(path, file, { contentType: file.type });
+          .upload(path, photo, { contentType: "image/jpeg" });
         if (uploadError) {
           console.error("upload:", uploadError);
           setError("Couldn't upload your photo. If your last try failed, wait a few minutes and try again.");
@@ -106,7 +119,7 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
         {loading ? "Writing a caption…" : wait > 0 ? `Next photo in ${wait} min` : "Upload a photo"}
         <input
           type="file"
-          accept={Object.keys(PHOTO_TYPES).join(",")}
+          accept={PHOTO_TYPES.join(",")}
           onChange={onFileChange}
           disabled={loading || wait > 0}
           className="hidden"
@@ -115,7 +128,7 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
       {loading ? (
         <p className="-mt-2 animate-pulse text-sm text-zinc-500">{THINKING[line]}</p>
       ) : (
-        <p className="-mt-4 text-xs text-zinc-500">JPG, PNG or WebP, up to 5 MB · 1 photo per hour</p>
+        <p className="-mt-4 text-xs text-zinc-500">JPG, PNG or WebP, up to 20 MB · 1 photo per hour</p>
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
