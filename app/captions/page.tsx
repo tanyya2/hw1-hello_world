@@ -66,6 +66,17 @@ export default async function Memories({ searchParams }: PageProps<"/captions">)
         </div>
       )}
 
+      {mine && (
+        <p className="rounded-2xl bg-zinc-100 px-5 py-4 text-center text-sm text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+          Turn any of your photos into an AI illustration with <strong>Create a memory</strong>. Your illustrations are
+          saved privately in{" "}
+          <Link href="/memories" className="underline underline-offset-4 hover:text-black dark:hover:text-white">
+            My memories
+          </Link>
+          .
+        </p>
+      )}
+
       {!rows?.length && (
         <p className="text-center text-zinc-500">
           {mine ? "You haven't added any photos yet. " : "No captions here yet. "}

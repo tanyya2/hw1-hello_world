@@ -26,6 +26,12 @@ export default async function Header() {
         <Link href="/captions" className="font-semibold">
           Captions
         </Link>
+        {/* Private page, so only for signed-in users */}
+        {user && (
+          <Link href="/memories" className="font-semibold">
+            My memories
+          </Link>
+        )}
       </nav>
 
       {user ? <ProfileMenu avatarUrl={profile?.avatar_url ?? null} initials={initials} /> : <SignInButton />}

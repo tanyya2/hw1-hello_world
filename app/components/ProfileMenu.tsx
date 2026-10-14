@@ -61,6 +61,9 @@ export default function ProfileMenu({ avatarUrl, initials }: Props) {
           <Link href="/plans?view=mine" onClick={close} className={ITEM}>
             My plans
           </Link>
+          <Link href="/memories" onClick={close} className={ITEM}>
+            My memories
+          </Link>
           <form action={signOut} className="border-t border-zinc-200 dark:border-zinc-800">
             <button className={ITEM}>Sign out</button>
           </form>
