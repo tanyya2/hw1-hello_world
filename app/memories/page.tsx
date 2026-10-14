@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
+import VoteButtons from "@/app/plans/VoteButtons";
+import { tally } from "@/app/plans/votes";
 import MemoryCard from "./MemoryCard";
 
 export const metadata: Metadata = { title: "Memories" };
@@ -15,6 +17,7 @@ const PAGER = "rounded-full border border-zinc-300 px-4 py-1.5 text-sm transitio
 
 // Photos from plans with their AI captions, newest first, 10 per page.
 // "Everyone" is public, even logged out; "My memories" needs login.
+// Only logged-in users can vote.
 export default async function Memories({ searchParams }: PageProps<"/memories">) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -28,7 +31,7 @@ export default async function Memories({ searchParams }: PageProps<"/memories">)
     .from("memories")
     // The author's profile (not the voters', which memory_votes also links to)
     .select(
-      "id, created_at, photo_url, caption, plans(neighborhood, content), profiles!memories_user_id_fkey(first_name, last_name)",
+      "id, created_at, photo_url, caption, plans(neighborhood, content), profiles!memories_user_id_fkey(first_name, last_name), memory_votes(user_id, value)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -88,7 +91,9 @@ export default async function Memories({ searchParams }: PageProps<"/memories">)
             photoUrl={row.photo_url}
             caption={row.caption}
             meta={[title, plan?.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
-          />
+          >
+            <VoteButtons kind="memory" id={row.id} initial={tally(row.memory_votes, userId)} signedIn={!!userId} />
+          </MemoryCard>
         );
       })}
 

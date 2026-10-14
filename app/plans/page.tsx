@@ -92,7 +92,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
                 </Link>
               )}
               <div className="flex-1">
-                <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
+                <VoteButtons kind="plan" id={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
               </div>
             </div>
           </PlanCard>
