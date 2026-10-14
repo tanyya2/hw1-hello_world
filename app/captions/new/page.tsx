@@ -9,6 +9,9 @@ import { minutesUntilNext } from "../prompt";
 
 export const metadata: Metadata = { title: "Add a photo" };
 
+// The safety check and the caption take ~15–20 s
+export const maxDuration = 60;
+
 // Add a photo to a plan you went on (anyone's): /captions/new?plan=123
 export default async function NewMemory({ searchParams }: PageProps<"/captions/new">) {
   const params = await searchParams;

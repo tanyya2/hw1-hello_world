@@ -24,7 +24,10 @@ export async function clearUnfinished(): Promise<void> {
   if (!userId) return;
 
   // RLS: users can only list and delete files in their own folder
-  const { data: files } = await supabase.storage.from("memories").list(userId, { limit: 100 });
+  // Newest first: leftovers are recent, and a user can have more than 100 photos
+  const { data: files } = await supabase.storage
+    .from("memories")
+    .list(userId, { limit: 100, sortBy: { column: "created_at", order: "desc" } });
   const { data: memories } = await supabase.from("memories").select("photo_url").eq("user_id", userId);
   const used = new Set((memories ?? []).map((memory) => memory.photo_url));
 
@@ -57,6 +60,11 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
     return { error: "Invalid photo." };
   }
 
+  const photoUrl = supabase.storage.from("memories").getPublicUrl(path).data.publicUrl;
+  // A photo that already has a caption must not be deleted by the cleanup below
+  const { data: used } = await supabase.from("memories").select("id").eq("photo_url", photoUrl).maybeSingle();
+  if (used) return { error: "This photo already has a caption." };
+
   const fail = async (error: string): Promise<MemoryResult> => {
     // RLS: users can only delete photos in their own folder
     const { error: removeError } = await supabase.storage.from("memories").remove([path]);
@@ -72,15 +80,15 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
     if (wait > 0) return fail(`You can add 1 photo per hour. Try again in ${wait} min.`);
 
     // The bucket is public, so the photo can be read straight from its URL
-    const photoUrl = supabase.storage.from("memories").getPublicUrl(path).data.publicUrl;
     const res = await fetch(photoUrl);
     if (!res.ok) {
       console.error("makeMemory: download failed", res.status);
       return fail("Couldn't read your photo. Try uploading it again.");
     }
     const photo = await res.blob();
+    // The app always uploads a cleaned JPEG of at most 5 MB
     if (photo.type !== "image/jpeg" || photo.size > MAX_PHOTO_BYTES) {
-      return fail("Photos must be JPG, PNG or WebP, up to 20 MB.");
+      return fail("Please upload your photo through the app.");
     }
     const bytes = new Uint8Array(await photo.arrayBuffer());
     // The app removes locations before uploading; this catches uploads that skipped it
@@ -99,7 +107,7 @@ export async function makeMemory(planId: number, path: string): Promise<MemoryRe
     }
 
     // RLS: user_id defaults to the logged-in user; users can add memories to any plan,
-    // 1 per hour
+    // 1 per hour, only with a photo from their own folder
     const { data: saved, error } = await supabase
       .from("memories")
       .insert({ plan_id: planId, photo_url: photoUrl, caption, prompt: reply.prompt, model: reply.model })
