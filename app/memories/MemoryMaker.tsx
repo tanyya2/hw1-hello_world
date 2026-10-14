@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { clearUnfinished, makeMemory, type Memory, type MemoryResult } from "./actions";
+import MemoryCard from "./MemoryCard";
 import { COOLDOWN_MS, MAX_PHOTO_BYTES, PHOTO_TYPES } from "./prompt";
 
 const OFFLINE = "Something went wrong. Check your connection and try again.";
@@ -86,16 +87,12 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
 
   if (memory) {
     return (
-      <figure className="flex w-full flex-col gap-3 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-        <Image
-          src={memory.photoUrl}
-          alt={memory.caption}
-          width={800}
-          height={800}
-          className="h-auto max-h-[32rem] w-full object-contain"
-        />
-        <figcaption className="px-5 pb-5 text-center text-lg font-medium">{memory.caption}</figcaption>
-      </figure>
+      <div className="flex flex-col items-center gap-4">
+        <MemoryCard photoUrl={memory.photoUrl} caption={memory.caption} />
+        <Link href="/memories?view=mine" className="text-sm underline underline-offset-4">
+          See my memories
+        </Link>
+      </div>
     );
   }
 
