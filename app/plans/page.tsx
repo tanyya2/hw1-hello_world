@@ -87,7 +87,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               {row.user_id === userId && (
-                <Link href={`/memories/new?plan=${row.id}`} className={PAGER}>
+                <Link href={`/captions/new?plan=${row.id}`} className={PAGER}>
                   Add a photo
                 </Link>
               )}

@@ -89,8 +89,8 @@ export default function MemoryMaker({ userId, planId, wait: initialWait }: Props
     return (
       <div className="flex flex-col items-center gap-4">
         <MemoryCard photoUrl={memory.photoUrl} caption={memory.caption} />
-        <Link href="/memories?view=mine" className="text-sm underline underline-offset-4">
-          See my memories
+        <Link href="/captions?view=mine" className="text-sm underline underline-offset-4">
+          See my captions
         </Link>
       </div>
     );

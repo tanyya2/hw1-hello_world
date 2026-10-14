@@ -9,8 +9,8 @@ import { minutesUntilNext } from "../prompt";
 
 export const metadata: Metadata = { title: "Add a photo" };
 
-// Add a photo to one of your own plans: /memories/new?plan=123
-export default async function NewMemory({ searchParams }: PageProps<"/memories/new">) {
+// Add a photo to one of your own plans: /captions/new?plan=123
+export default async function NewMemory({ searchParams }: PageProps<"/captions/new">) {
   const params = await searchParams;
   const planId = Number.parseInt(String(params.plan ?? ""), 10);
 

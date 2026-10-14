@@ -6,7 +6,7 @@ import VoteButtons from "@/app/plans/VoteButtons";
 import { tally } from "@/app/plans/votes";
 import MemoryCard from "./MemoryCard";
 
-export const metadata: Metadata = { title: "Memories" };
+export const metadata: Metadata = { title: "Captions" };
 
 const PER_PAGE = 10;
 
@@ -16,9 +16,9 @@ const TAB_OFF = `${TAB} text-zinc-600 hover:text-black dark:text-zinc-400 dark:h
 const PAGER = "rounded-full border border-zinc-300 px-4 py-1.5 text-sm transition hover:border-black dark:border-zinc-700 dark:hover:border-white";
 
 // Photos from plans with their AI captions, newest first, 10 per page.
-// "Everyone" is public, even logged out; "My memories" needs login.
+// "Everyone" is public, even logged out; "My captions" needs login.
 // Only logged-in users can vote.
-export default async function Memories({ searchParams }: PageProps<"/memories">) {
+export default async function Memories({ searchParams }: PageProps<"/captions">) {
   const params = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -46,21 +46,21 @@ export default async function Memories({ searchParams }: PageProps<"/memories">)
     if (mine) search.set("view", "mine");
     if (nextPage > 1) search.set("page", String(nextPage));
     const query = search.toString();
-    return query ? `/memories?${query}` : "/memories";
+    return query ? `/captions?${query}` : "/captions";
   };
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-12">
-      <h1 className="text-center text-3xl font-semibold tracking-tight">Memories</h1>
+      <h1 className="text-center text-3xl font-semibold tracking-tight">Captions</h1>
 
       {userId && (
         <div className="flex justify-center">
           <div className="flex gap-1 rounded-full border border-zinc-300 p-1 dark:border-zinc-700">
-            <Link href="/memories" className={mine ? TAB_OFF : TAB_ON}>
+            <Link href="/captions" className={mine ? TAB_OFF : TAB_ON}>
               Everyone
             </Link>
-            <Link href="/memories?view=mine" className={mine ? TAB_ON : TAB_OFF}>
-              My memories
+            <Link href="/captions?view=mine" className={mine ? TAB_ON : TAB_OFF}>
+              My captions
             </Link>
           </div>
         </div>
@@ -68,7 +68,7 @@ export default async function Memories({ searchParams }: PageProps<"/memories">)
 
       {!rows?.length && (
         <p className="text-center text-zinc-500">
-          {mine ? "You haven't added any photos yet. " : "No memories here yet. "}
+          {mine ? "You haven't added any photos yet. " : "No captions here yet. "}
           {userId && (
             <Link href="/plans?view=mine" className="underline underline-offset-4 hover:text-black dark:hover:text-white">
               Add a photo to one of your plans

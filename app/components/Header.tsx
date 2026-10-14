@@ -23,8 +23,8 @@ export default async function Header() {
         <Link href="/plans" className="font-semibold">
           Plans
         </Link>
-        <Link href="/memories" className="font-semibold">
-          Memories
+        <Link href="/captions" className="font-semibold">
+          Captions
         </Link>
       </nav>
 
