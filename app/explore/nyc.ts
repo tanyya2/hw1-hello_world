@@ -11,6 +11,8 @@ export const CATEGORIES = {
   coffee: { label: "Coffee", geoapify: "catering.cafe" },
   restaurants: { label: "Restaurants", geoapify: "catering.restaurant" },
   bars: { label: "Bars", geoapify: "catering.bar,catering.pub" },
+  // Only nightclubs: the wider "adult" category also has strip clubs
+  clubs: { label: "Clubs", geoapify: "adult.nightclub" },
   museums: { label: "Museums", geoapify: "entertainment.museum,entertainment.culture.gallery" },
   parks: { label: "Parks", geoapify: "leisure.park" },
   bookstores: { label: "Bookstores", geoapify: "commercial.books" },
