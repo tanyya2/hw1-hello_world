@@ -17,8 +17,8 @@ export default async function Header() {
   return (
     <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-3 dark:border-zinc-800">
       <nav className="flex items-center gap-6">
-        <Link href="/" className="font-semibold">
-          Home
+        <Link href="/" className="font-bold tracking-tight">
+          OutNYC
         </Link>
         <Link href="/plans" className="font-semibold">
           Plans

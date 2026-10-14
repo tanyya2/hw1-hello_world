@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "What's around me in NYC",
+  title: "OutNYC",
   description: "Find places near you in NYC and get an AI-made plan for your time",
 };
 
