@@ -86,22 +86,34 @@ Reply with only JSON, no other text:
 // Every model refused: out of free requests for today, or overloaded
 export class GeminiBusyError extends Error {}
 
+export type AskOptions = {
+  // Try with Google Search first (default), or never use it
+  search?: boolean;
+  // Let models think before answering: slower, but better for creative work
+  thinking?: boolean;
+  // A photo sent along with the prompt (base64 data)
+  image?: { mimeType: string; data: string };
+};
+
 // Tries each model with Google Search first (real ratings), then each without.
 // Refusals come back in well under a second, so falling through is quick.
 // Returns the reply, the prompt and model actually used, and the search
 // suggestions Google requires us to show alongside answers grounded in Search.
-export async function askGemini(promptFor: (search: boolean) => string) {
+export async function askGemini(
+  promptFor: (search: boolean) => string,
+  { search: useSearch = true, thinking = false, image }: AskOptions = {}
+) {
   const failures: string[] = [];
-  for (const search of [true, false]) {
+  for (const search of useSearch ? [true, false] : [false]) {
     const prompt = promptFor(search);
     for (const model of MODELS) {
       const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
+          contents: [{ parts: [...(image ? [{ inline_data: { mime_type: image.mimeType, data: image.data } }] : []), { text: prompt }] }],
           ...(search && { tools: [{ google_search: {} }] }),
-          ...(model.thinkingOff && { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
+          ...(model.thinkingOff && !thinking && { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
         }),
       });
       if (!res.ok) {

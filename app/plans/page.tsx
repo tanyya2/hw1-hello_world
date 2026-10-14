@@ -29,7 +29,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
   let query = supabase
     .from("plans")
     .select(
-      "id, created_at, neighborhood, inputs, content, profiles(first_name, last_name), votes(user_id, value)",
+      "id, created_at, user_id, neighborhood, inputs, content, profiles(first_name, last_name), votes(user_id, value)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -85,7 +85,16 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
             plan={{ ...content, id: row.id, hours: row.inputs?.hours, budget: row.inputs?.budget }}
             meta={[row.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
           >
-            <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {row.user_id === userId && (
+                <Link href={`/memories/new?plan=${row.id}`} className={PAGER}>
+                  Add a photo
+                </Link>
+              )}
+              <div className="flex-1">
+                <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
+              </div>
+            </div>
           </PlanCard>
         );
       })}
