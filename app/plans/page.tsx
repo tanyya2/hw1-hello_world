@@ -16,7 +16,7 @@ const TAB_OFF = `${TAB} text-zinc-600 hover:text-black dark:text-zinc-400 dark:h
 const PAGER = "rounded-full border border-zinc-300 px-4 py-1.5 text-sm transition hover:border-black dark:border-zinc-700 dark:hover:border-white";
 
 // Plans newest first, 10 per page. "Everyone" is public; "My plans" needs login.
-// Only logged-in users can vote and add photos (to anyone's plan they went on).
+// Only logged-in users can vote.
 export default async function Plans({ searchParams }: PageProps<"/plans">) {
   const params = await searchParams;
   const supabase = await createClient();
@@ -85,16 +85,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
             plan={{ ...content, id: row.id, hours: row.inputs?.hours, budget: row.inputs?.budget }}
             meta={[row.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              {userId && (
-                <Link href={`/captions/new?plan=${row.id}`} className={PAGER}>
-                  Add a photo
-                </Link>
-              )}
-              <div className="flex-1">
-                <VoteButtons kind="plan" id={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
-              </div>
-            </div>
+            <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
           </PlanCard>
         );
       })}

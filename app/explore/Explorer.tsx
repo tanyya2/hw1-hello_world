@@ -213,7 +213,7 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
 
       {mode === "plan" && plan && (
         <PlanCard plan={plan}>
-          <VoteButtons key={plan.id} kind="plan" id={plan.id} initial={{ up: 0, down: 0, mine: null }} signedIn />
+          <VoteButtons key={plan.id} planId={plan.id} initial={{ up: 0, down: 0, mine: null }} signedIn />
         </PlanCard>
       )}
 

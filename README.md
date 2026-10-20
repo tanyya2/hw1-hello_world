@@ -19,4 +19,4 @@ npm install
 npm run dev
 ```
 
-Needs a `.env.local` with Supabase, Gemini, Geoapify and OpenAI keys.
+Needs a `.env.local` with Supabase, Gemini and Geoapify keys.

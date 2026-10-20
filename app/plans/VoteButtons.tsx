@@ -1,18 +1,16 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { vote, type VoteKind } from "./actions";
+import { vote } from "./actions";
 import type { Tally } from "./votes";
 
 type Props = {
-  // What is being voted on: a plan or a memory
-  kind: VoteKind;
-  id: number;
+  planId: number;
   initial: Tally;
   signedIn: boolean;
 };
 
-export default function VoteButtons({ kind, id, initial, signedIn }: Props) {
+export default function VoteButtons({ planId, initial, signedIn }: Props) {
   const [tally, setTally] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startVote] = useTransition();
@@ -20,7 +18,7 @@ export default function VoteButtons({ kind, id, initial, signedIn }: Props) {
   function cast(value: 1 | -1) {
     startVote(async () => {
       try {
-        const result = await vote(kind, id, value);
+        const result = await vote(planId, value);
         if ("error" in result) {
           setError(result.error);
         } else {
