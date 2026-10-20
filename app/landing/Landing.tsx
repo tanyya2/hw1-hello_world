@@ -119,7 +119,7 @@ export default async function Landing() {
         </section>
       )}
 
-      <footer className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-4 px-5 pt-10 pb-14 text-sm text-muted sm:px-8 lg:px-12">
+      <footer className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-4 px-5 py-5 text-sm text-muted sm:px-8 lg:px-12">
         <span>© {new Date().getFullYear()} OutNYC</span>
         <span>Place data from Google</span>
       </footer>
