@@ -1,11 +1,14 @@
 import { createClient } from "@/utils/supabase/server";
-import SignInButton from "./components/SignInButton";
 import Explorer from "./explore/Explorer";
+import Landing from "./landing/Landing";
 
 export default async function Home() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
+
+  // Logged-out visitors get the landing page; searching needs login (also enforced on the server)
+  if (!user) return <Landing />;
 
   const intro = (
     <div className="flex flex-col gap-3">
@@ -18,17 +21,7 @@ export default async function Home() {
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-10 px-4 py-12 text-center">
-      {/* Searching is for logged-in users only (also enforced on the server) */}
-      {user ? (
-        <Explorer intro={intro} />
-      ) : (
-        <>
-          {intro}
-          <div className="flex justify-center">
-            <SignInButton />
-          </div>
-        </>
-      )}
+      <Explorer intro={intro} />
     </main>
   );
 }
