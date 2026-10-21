@@ -10,7 +10,7 @@ Plan your time out in New York City. Pick where you are, and OutNYC finds real p
 
 ## Built with
 
-Next.js, Supabase, Google Gemini, Geoapify and OpenStreetMap, deployed on Vercel.
+Next.js, Supabase, Google Maps Platform (Places and Maps), Google Gemini and OpenStreetMap (neighborhood names), deployed on Vercel.
 
 ## Run locally
 
@@ -19,4 +19,4 @@ npm install
 npm run dev
 ```
 
-Needs a `.env.local` with Supabase, Gemini and Geoapify keys.
+Needs a `.env.local` with Supabase, Gemini and Google Maps keys and a Google Map ID.
