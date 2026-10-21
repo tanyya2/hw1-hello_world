@@ -2,7 +2,6 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import SignInButton from "@/app/components/SignInButton";
-import RouteMap from "./RouteMap";
 
 const KICKER = "m-0 text-[13px] uppercase tracking-[0.14em] text-muted";
 
@@ -65,8 +64,8 @@ export default async function Landing({ userId }: { userId: string | null }) {
 
   return (
     <main className="flex-1">
-      <section className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-14 px-5 pt-14 pb-16 sm:px-8 lg:px-12 sm:pt-[72px]">
-        <div className="flex min-w-0 flex-1 basis-[420px] flex-col gap-6">
+      <section className="mx-auto w-full max-w-[1440px] px-5 pt-14 pb-16 sm:px-8 lg:px-12 sm:pt-[72px]">
+        <div className="flex max-w-3xl flex-col gap-6">
           <h1 className="m-0 font-serif text-5xl leading-[1.02] font-medium tracking-[-0.02em] sm:text-[64px]">
             Your next few hours in New York, planned for you
           </h1>
@@ -91,7 +90,6 @@ export default async function Landing({ userId }: { userId: string | null }) {
             </a>
           </div>
         </div>
-        <RouteMap />
       </section>
 
       {mine.length > 0 && (
