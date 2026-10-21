@@ -3,8 +3,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { NYC, inNyc } from "./nyc";
 
-// Place names come from OpenStreetMap's free geocoder (Nominatim).
-// Usage policy: identify the app, max 1 request per second.
+// Neighborhood names come from NYC's official neighborhood map (2020 Neighborhood
+// Tabulation Areas on NYC Open Data, free, no key), e.g. "Hell's Kitchen, Manhattan".
+// Typed searches are found with OpenStreetMap's free geocoder (Nominatim), which is
+// also the fallback name. Nominatim usage policy: identify the app, max 1 request per second.
+const NYC_NEIGHBORHOODS = "https://data.cityofnewyork.us/resource/9nt8-h7nd.json";
 const NOMINATIM = "https://nominatim.openstreetmap.org";
 const HEADERS = {
   "User-Agent": "whats-around-me/1.0 (student project)",
@@ -34,6 +37,22 @@ function labelFor(address: NominatimAddress | undefined, fallback: string) {
   return parts.join(", ") || fallback;
 }
 
+// "Hell's Kitchen, Manhattan" for a point in NYC, or null if the lookup fails
+async function nycNeighborhood(lat: number, lon: number) {
+  try {
+    const params = new URLSearchParams({
+      $select: "ntaname,boroname",
+      $where: `intersects(the_geom, 'POINT (${lon} ${lat})')`,
+    });
+    const res = await fetch(`${NYC_NEIGHBORHOODS}?${params}`);
+    if (!res.ok) return null;
+    const [area]: { ntaname?: string; boroname?: string }[] = await res.json();
+    return area?.ntaname && area.boroname ? `${area.ntaname}, ${area.boroname}` : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function reverseGeocode(lat: number, lon: number): Promise<LookupResult> {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
@@ -47,6 +66,9 @@ export async function reverseGeocode(lat: number, lon: number): Promise<LookupRe
   }
 
   const spot = { lat: round(lat), lon: round(lon), label: "Your location" };
+  const neighborhood = await nycNeighborhood(spot.lat, spot.lon);
+  if (neighborhood) return { spot: { ...spot, label: neighborhood } };
+
   try {
     const res = await fetch(
       `${NOMINATIM}/reverse?format=jsonv2&zoom=16&lat=${spot.lat}&lon=${spot.lon}`,
@@ -86,13 +108,8 @@ export async function searchNeighborhood(query: string): Promise<LookupResult> {
     const [match] = await res.json();
     if (!match) return { error: `Couldn't find "${q}" in NYC.` };
 
-    return {
-      spot: {
-        lat: round(Number(match.lat)),
-        lon: round(Number(match.lon)),
-        label: labelFor(match.address, q),
-      },
-    };
+    const spot = { lat: round(Number(match.lat)), lon: round(Number(match.lon)) };
+    return { spot: { ...spot, label: (await nycNeighborhood(spot.lat, spot.lon)) ?? labelFor(match.address, q) } };
   } catch {
     return { error: "Couldn't search right now. Try again in a moment." };
   }
