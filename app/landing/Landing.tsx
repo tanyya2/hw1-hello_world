@@ -2,32 +2,13 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import SignInButton from "@/app/components/SignInButton";
+import { parseContent, topPlans } from "@/app/plans/top";
 
 const STEPS = [
   { title: "Where", text: "Use your location or pick a neighborhood, like Williamsburg or the West Village." },
   { title: "Your mood", text: "Quick lunch? Cheap date? Say no more, we’ve got you." },
   { title: "Your plan", text: "3–4 stops that are open, in an order you can walk, and what it will cost." },
 ];
-
-// The 3 plans with the most 👍 (no minimum yet: there aren't many users)
-async function topPlans() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("plans")
-    .select("id, neighborhood, content, votes(value)")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  return (data ?? [])
-    .map((row) => ({
-      id: row.id,
-      title: (JSON.parse(row.content) as PlanContent).title,
-      neighborhood: row.neighborhood,
-      up: row.votes.filter((vote) => vote.value === 1).length,
-    }))
-    .filter((plan) => plan.up > 0)
-    .sort((a, b) => b.up - a.up)
-    .slice(0, 3);
-}
 
 // The signed-in user's 3 latest plans
 async function myPlans(userId: string) {
@@ -50,7 +31,8 @@ const BUTTON = "min-h-14 rounded-full px-7 py-4 text-base";
 
 // Home for everyone. Making a plan needs sign-in; looking around doesn't.
 export default async function Landing({ userId }: { userId: string | null }) {
-  const [top, mine] = await Promise.all([topPlans(), userId ? myPlans(userId) : []]);
+  const [best, mine] = await Promise.all([topPlans(3), userId ? myPlans(userId) : []]);
+  const top = best.map(({ row, up }) => ({ id: row.id, title: parseContent(row).title, neighborhood: row.neighborhood, up }));
 
   return (
     <main className="flex-1">
