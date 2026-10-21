@@ -70,7 +70,7 @@ export default async function Landing({ userId }: { userId: string | null }) {
             Your next few hours in New York planned for you
           </h1>
           <p className="m-0 max-w-[480px] text-[19px] leading-relaxed text-ink-soft">
-            Real places near you that are open now, in an order you can walk, with the route and what it will cost.
+            Real places near you, in an order you can walk, with the route and what it will cost.
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             {userId ? (
