@@ -27,13 +27,19 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
   const mine = params.view === "mine" && !!userId;
   const page = Math.max(1, Number.parseInt(String(params.page ?? "1"), 10) || 1);
 
+  // Everyone: the top 3 show first (page 1) and are left out of the newest list on
+  // every page, so each plan appears once and pages don't skip or repeat plans
+  const best = mine ? [] : await topPlans(3);
+  const top = page === 1 ? best : [];
+
   let query = supabase
     .from("plans")
     .select(PLAN_FIELDS, { count: "exact" })
     .order("created_at", { ascending: false })
     .range((page - 1) * PER_PAGE, page * PER_PAGE - 1);
   if (mine) query = query.eq("user_id", userId);
-  const [{ data: rows, count }, top] = await Promise.all([query, !mine && page === 1 ? topPlans(3) : []]);
+  if (best.length > 0) query = query.not("id", "in", `(${best.map(({ row }) => row.id).join(",")})`);
+  const { data: rows, count } = await query;
   const pages = Math.max(1, Math.ceil((count ?? 0) / PER_PAGE));
 
   const href = (nextPage: number) => {
@@ -87,8 +93,8 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
       )}
 
       <section aria-label={mine ? "My plans" : "All plans"} className="flex flex-col gap-3">
-        {top.length > 0 && <h2 className={LABEL}>Newest</h2>}
-        {!rows?.length && (
+        {top.length > 0 && !!rows?.length && <h2 className={LABEL}>Newest</h2>}
+        {!rows?.length && top.length === 0 && (
           <p className="text-muted">
             {mine ? "You haven't made any plans yet. " : "No plans here. "}
             <Link href="/plan" className="underline underline-offset-4 hover:text-ink">
