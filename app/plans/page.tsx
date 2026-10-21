@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import PlanCard from "@/app/explore/PlanCard";
-import PlanTile from "./PlanTile";
 import VoteButtons from "./VoteButtons";
 import { PLAN_FIELDS, authorOf, parseContent, topPlans, type PlanRow } from "./top";
 import { tally } from "./votes";
@@ -17,7 +16,7 @@ const TAB_OFF = `${TAB} text-ink-soft hover:text-ink`;
 const PAGER = "rounded-full border border-line-strong px-4 py-1.5 text-sm transition hover:border-ink";
 
 // Plans newest first, 10 per page, as a list (default) or a grid.
-// "Everyone" is public and starts with the all-time top 3; "My plans" needs login.
+// "Everyone" is public and starts with the all-time top 3 (same cards, marked); "My plans" needs login.
 // Only logged-in users can vote.
 export default async function Plans({ searchParams }: PageProps<"/plans">) {
   const params = await searchParams;
@@ -49,6 +48,9 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
     return query ? `/plans?${query}` : "/plans";
   };
 
+  // Same cards either way: one column, or 2 per row (one on phones)
+  const layout = grid ? "grid items-start gap-5 md:grid-cols-2" : "flex flex-col gap-6";
+
   const metaFor = (row: PlanRow, showAuthor: boolean) => {
     const author = authorOf(row);
     const date = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -59,7 +61,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <main className={`mx-auto flex w-full flex-col gap-8 px-5 py-10 sm:px-8 ${grid ? "max-w-6xl" : "max-w-3xl"}`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="m-0 font-serif text-4xl font-medium">Plans</h1>
         <div className="flex flex-wrap items-center gap-3">
@@ -89,23 +91,27 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
           <h2 id="top-plans" className="m-0 text-[13px] uppercase tracking-[0.12em] text-muted">
             Top plans
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={layout}>
             {top.map(({ row }, i) => (
-              <PlanTile
+              <PlanCard
                 key={row.id}
                 rank={i + 1}
                 plan={{ ...parseContent(row), id: row.id, budget: row.inputs?.budget ?? "" }}
                 meta={metaFor(row, true)}
               >
                 {votesFor(row)}
-              </PlanTile>
+              </PlanCard>
             ))}
           </div>
         </section>
       )}
 
       <section aria-label={mine ? "My plans" : "All plans"} className="flex flex-col gap-3">
-        {top.length > 0 && <h2 className="m-0 text-[13px] uppercase tracking-[0.12em] text-muted">Newest</h2>}
+        {top.length > 0 && (
+          <h2 className="m-0 text-[13px] uppercase tracking-[0.12em] text-muted">
+            Newest
+          </h2>
+        )}
 
         {!rows?.length && (
           <p className="text-muted">
@@ -116,19 +122,12 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
           </p>
         )}
 
-        <div className={grid ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "mx-auto flex w-full max-w-2xl flex-col gap-6"}>
-          {((rows ?? []) as PlanRow[]).map((row) => {
-            const plan = { ...parseContent(row), id: row.id, budget: row.inputs?.budget ?? "" };
-            return grid ? (
-              <PlanTile key={row.id} plan={plan} meta={metaFor(row, !mine)}>
-                {votesFor(row)}
-              </PlanTile>
-            ) : (
-              <PlanCard key={row.id} plan={plan} meta={metaFor(row, !mine)}>
-                {votesFor(row)}
-              </PlanCard>
-            );
-          })}
+        <div className={layout}>
+          {((rows ?? []) as PlanRow[]).map((row) => (
+            <PlanCard key={row.id} plan={{ ...parseContent(row), id: row.id, budget: row.inputs?.budget ?? "" }} meta={metaFor(row, !mine)}>
+              {votesFor(row)}
+            </PlanCard>
+          ))}
         </div>
       </section>
 

@@ -5,6 +5,8 @@ type Props = {
   plan: Plan;
   // e.g. "Morningside Heights · by Sam K. · Oct 8"
   meta?: React.ReactNode;
+  // Top plans: 1, 2 or 3
+  rank?: number;
   // e.g. vote buttons
   children?: React.ReactNode;
 };
@@ -22,10 +24,15 @@ function searchLink(stop: PlanStop) {
   return `https://www.google.com/search?${new URLSearchParams({ q: `${stop.name} ${stop.address ?? "New York, NY"}` })}`;
 }
 
-export default function PlanCard({ plan, meta, children }: Props) {
+export default function PlanCard({ plan, meta, rank, children }: Props) {
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 text-left">
+    <article className={`flex flex-col gap-4 rounded-2xl border bg-card p-5 text-left ${rank ? "border-accent/40" : "border-line"}`}>
       <header className="flex flex-col gap-1">
+        {rank && (
+          <span className="self-start rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+            #{rank} top plan
+          </span>
+        )}
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-serif text-2xl font-medium">{plan.title}</h2>
           <span className="text-sm text-muted">
