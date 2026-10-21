@@ -3,20 +3,10 @@ import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import SignInButton from "@/app/components/SignInButton";
 
-const KICKER = "m-0 text-[13px] uppercase tracking-[0.14em] text-muted";
-
 const STEPS = [
   { title: "Where", text: "Use your location or pick a neighborhood, like Williamsburg or the West Village." },
   { title: "Your mood", text: "Quick lunch? Cheap date? Say no more, we’ve got you." },
   { title: "Your plan", text: "3–4 stops that are open, in an order you can walk, and what it will cost." },
-];
-
-// A hand-written example, so visitors see what a plan looks like before signing in
-const EXAMPLE = [
-  { name: "Hungarian Pastry Shop", note: "Coffee and a strudel in the back room · 45 min" },
-  { name: "Cathedral of St. John the Divine", note: "Walk the nave and the garden · 40 min" },
-  { name: "Morningside Park", note: "Down the steps to the pond · 25 min" },
-  { name: "Book Culture", note: "Browse the new fiction table · 30 min" },
 ];
 
 // The 3 plans with the most 👍 (no minimum yet: there aren't many users)
@@ -85,9 +75,6 @@ export default async function Landing({ userId }: { userId: string | null }) {
             <Link href="/plans" className={`${BUTTON} border border-ink font-medium hover:bg-card`}>
               Browse plans
             </Link>
-            <a href="#example" className="px-3 py-4 font-medium hover:text-accent">
-              See an example →
-            </a>
           </div>
         </div>
       </section>
@@ -131,24 +118,6 @@ export default async function Landing({ userId }: { userId: string | null }) {
         </div>
       </section>
 
-      <section id="example" className="mx-auto flex w-full max-w-[1440px] scroll-mt-6 flex-wrap gap-14 px-5 py-[72px] sm:px-8 lg:px-12">
-        <div className="flex min-w-0 flex-1 basis-[300px] flex-col gap-4">
-          <p className={KICKER}>Example plan</p>
-          <h2 className="m-0 font-serif text-[42px] leading-[1.1] font-medium">A slow afternoon in Morningside Heights</h2>
-          <p className="m-0 leading-relaxed text-ink-soft">2 h 30 min · $$ · from Columbia’s main gate</p>
-        </div>
-        <ol className="m-0 flex min-w-0 flex-[2] basis-[480px] list-none flex-col p-0">
-          {EXAMPLE.map((stop, i) => (
-            <li key={stop.name} className="flex gap-5 border-t border-line py-5 last:border-b">
-              <span className="w-7 font-serif text-[28px]">{i + 1}</span>
-              <div className="flex flex-col gap-1">
-                <strong className="text-lg font-semibold">{stop.name}</strong>
-                <span className="text-[15px] text-ink-soft">{stop.note}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-      </section>
 
       {top.length > 0 && (
         <section className="bg-ink text-paper">
