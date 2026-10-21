@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import Chip from "@/app/components/Chip";
 import LocationPicker from "./LocationPicker";
@@ -18,25 +18,7 @@ const PlaceMap = dynamic(() => import("./PlaceMap"), {
   loading: () => <div className="h-96 w-full rounded-2xl border border-line bg-map" />,
 });
 
-const COUNTS = [10, 20, 50];
 const OFFLINE = "Something went wrong. Check your connection and try again.";
-
-// Take the closest places evenly from each category, so 10 results with
-// Coffee + Museums isn't 10 coffee shops. Lists arrive sorted by distance.
-function closest(places: Place[], count: number) {
-  const byCategory = new Map<Category, Place[]>();
-  for (const place of places) {
-    byCategory.set(place.category, [...(byCategory.get(place.category) ?? []), place]);
-  }
-  const lists = [...byCategory.values()];
-  const picked: Place[] = [];
-  for (let i = 0; picked.length < count && lists.some((list) => list[i]); i++) {
-    for (const list of lists) {
-      if (list[i] && picked.length < count) picked.push(list[i]);
-    }
-  }
-  return picked.sort((a, b) => a.miles - b.miles);
-}
 
 // `intro` (heading and description) shows until a location is picked
 export default function Explorer({ intro }: { intro: React.ReactNode }) {
@@ -50,7 +32,6 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
 
   // Find places
   const [places, setPlaces] = useState<Place[] | null>(null);
-  const [count, setCount] = useState(20);
   const [view, setView] = useState<"list" | "map">("list");
 
   // Make a plan
@@ -58,8 +39,6 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
   const [hours, setHours] = useState<number>(2);
   const [budget, setBudget] = useState<string>("$$");
   const [plan, setPlan] = useState<Plan | null>(null);
-
-  const shown = useMemo(() => (places ? closest(places, count) : []), [places, count]);
 
   // Places no longer match once the search changes
   function clearPlaces() {
@@ -224,14 +203,9 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
       {mode === "places" && places && places.length > 0 && spot && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="mr-1 text-sm text-zinc-500">Show</span>
-              {COUNTS.map((n) => (
-                <Chip key={n} selected={count === n} onClick={() => setCount(n)}>
-                  {n}
-                </Chip>
-              ))}
-            </div>
+            <span className="text-sm text-muted">
+              {places.length} {places.length === 1 ? "place" : "places"}, closest first
+            </span>
             <div className="flex items-center gap-2">
               <Chip selected={view === "list"} onClick={() => setView("list")}>
                 List
@@ -243,9 +217,9 @@ export default function Explorer({ intro }: { intro: React.ReactNode }) {
           </div>
 
           {view === "list" ? (
-            <PlaceList places={shown} />
+            <PlaceList places={places} />
           ) : (
-            <PlaceMap center={spot} radiusMiles={radius} places={shown} />
+            <PlaceMap center={spot} places={places} />
           )}
         </div>
       )}

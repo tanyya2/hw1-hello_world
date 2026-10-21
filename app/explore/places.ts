@@ -7,7 +7,7 @@ import { CATEGORIES, RADII_MILES, inNyc, type Category } from "./nyc";
 
 export type PlacesResult = { places: Place[] } | { error: string };
 
-// Up to 20 places per category from Google (one request each), each list sorted by distance
+// The 20 closest places per category from Google (one request each), closest first
 export async function findPlaces(
   lat: number,
   lon: number,
@@ -28,7 +28,7 @@ export async function findPlaces(
   if (!(await reserveGoogleRequests(supabase, picked.length))) return { error: GOOGLE_LIMIT_ERROR };
 
   try {
-    return { places: await fetchNearby(picked, lat, lon, radiusMiles) };
+    return { places: await fetchNearby(picked, lat, lon, radiusMiles, "closest") };
   } catch (err) {
     console.error("findPlaces:", err);
     return { error: "Couldn't load places right now. Try again in a moment." };

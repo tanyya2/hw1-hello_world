@@ -70,8 +70,13 @@ function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
   return Math.round(miles * 10) / 10;
 }
 
-// Up to 20 of the most popular places of one category within the radius, closest first
-export async function fetchCategory(category: Category, lat: number, lon: number, radiusMiles: number) {
+// "closest": the 20 nearest places (Find places). "popular": the 20 most popular
+// within the radius, so plans pick good places (by distance alone, "parks" near
+// a campus are its lawns). Either way the list comes back closest first.
+export type Ranking = "closest" | "popular";
+
+// Up to 20 places of one category within the radius
+export async function fetchCategory(category: Category, lat: number, lon: number, radiusMiles: number, ranking: Ranking) {
   const { google, primaryOnly } = CATEGORIES[category];
   const res = await fetch(NEARBY, {
     method: "POST",
@@ -83,8 +88,7 @@ export async function fetchCategory(category: Category, lat: number, lon: number
     body: JSON.stringify({
       [primaryOnly ? "includedPrimaryTypes" : "includedTypes"]: google,
       maxResultCount: 20,
-      // Popular first: by distance alone, "parks" near a campus are its lawns
-      rankPreference: "POPULARITY",
+      rankPreference: ranking === "closest" ? "DISTANCE" : "POPULARITY",
       locationRestriction: {
         circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
       },
@@ -115,15 +119,18 @@ export async function fetchCategory(category: Category, lat: number, lon: number
     .sort((a, b) => a.miles - b.miles);
 }
 
-// One request per category, each list sorted by distance
-export async function fetchNearby(categories: Category[], lat: number, lon: number, radiusMiles: number) {
-  const lists = await Promise.all(categories.map((category) => fetchCategory(category, lat, lon, radiusMiles)));
+// One request per category; all places together, closest first
+export async function fetchNearby(categories: Category[], lat: number, lon: number, radiusMiles: number, ranking: Ranking) {
+  const lists = await Promise.all(categories.map((category) => fetchCategory(category, lat, lon, radiusMiles, ranking)));
 
   // A place can match two categories (e.g. a bar that's also a club) — keep it once
   const seen = new Set<string>();
-  return lists.flat().filter((place) => {
-    if (seen.has(place.id)) return false;
-    seen.add(place.id);
-    return true;
-  });
+  return lists
+    .flat()
+    .filter((place) => {
+      if (seen.has(place.id)) return false;
+      seen.add(place.id);
+      return true;
+    })
+    .sort((a, b) => a.miles - b.miles);
 }

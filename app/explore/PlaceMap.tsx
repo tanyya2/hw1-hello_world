@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { APIProvider, AdvancedMarker, Circle, InfoWindow, Map, useMap } from "@vis.gl/react-google-maps";
+import { APIProvider, AdvancedMarker, InfoWindow, Map, useMap } from "@vis.gl/react-google-maps";
 import type { Spot } from "./geocode";
-import { METERS_PER_MILE, type Place } from "./google";
+import type { Place } from "./google";
 import { formatMiles } from "./nyc";
 
 // Numbered pins matching the list
@@ -12,15 +12,13 @@ const PIN =
 
 type Props = {
   center: Spot;
-  radiusMiles: number;
   places: Place[];
 };
 
 // Google's terms: places from Google must be shown on a Google map.
 // The browser key only works for the map, and only on our own sites.
-export default function PlaceMap({ center, radiusMiles, places }: Props) {
+export default function PlaceMap({ center, places }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const meters = radiusMiles * METERS_PER_MILE;
   const position = { lat: center.lat, lng: center.lon };
   const open = places.find((place) => place.id === openId);
 
@@ -36,8 +34,7 @@ export default function PlaceMap({ center, radiusMiles, places }: Props) {
           streetViewControl={false}
           mapTypeControl={false}
         >
-          <FitToRadius center={position} meters={meters} />
-          <Circle center={position} radius={meters} strokeColor="#1c1b19" strokeOpacity={0.5} strokeWeight={1} fillOpacity={0} clickable={false} />
+          <FitToPlaces center={position} places={places} />
           <AdvancedMarker position={position} title="Search center">
             <span className="block h-3.5 w-3.5 rounded-full border-2 border-white bg-accent shadow" />
           </AdvancedMarker>
@@ -78,16 +75,17 @@ export default function PlaceMap({ center, radiusMiles, places }: Props) {
   );
 }
 
-// Zoom so the whole search circle fits, whenever the search area changes
-function FitToRadius({ center, meters }: { center: google.maps.LatLngLiteral; meters: number }) {
+// Zoom so your location and every pin fit, whenever the results change
+function FitToPlaces({ center, places }: { center: google.maps.LatLngLiteral; places: Place[] }) {
   const map = useMap();
   const { lat, lng } = center;
 
   useEffect(() => {
     if (!map) return;
-    const bounds = new google.maps.Circle({ center: { lat, lng }, radius: meters }).getBounds();
-    if (bounds) map.fitBounds(bounds, 0);
-  }, [map, lat, lng, meters]);
+    const bounds = new google.maps.LatLngBounds({ lat, lng });
+    for (const place of places) bounds.extend({ lat: place.lat, lng: place.lon });
+    map.fitBounds(bounds, 48);
+  }, [map, lat, lng, places]);
 
   return null;
 }
