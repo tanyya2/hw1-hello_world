@@ -32,7 +32,7 @@ const BUTTON = "min-h-14 rounded-full px-7 py-4 text-base";
 // Home for everyone. Making a plan needs sign-in; looking around doesn't.
 export default async function Landing({ userId }: { userId: string | null }) {
   const [best, mine] = await Promise.all([topPlans(3), userId ? myPlans(userId) : []]);
-  const top = best.map(({ row, up }) => ({ id: row.id, title: parseContent(row).title, neighborhood: row.neighborhood, up }));
+  const top = best.map(({ row, score }) => ({ id: row.id, title: parseContent(row).title, neighborhood: row.neighborhood, score }));
 
   return (
     <main className="flex-1">
@@ -119,7 +119,7 @@ export default async function Landing({ userId }: { userId: string | null }) {
                       {plan.title}
                       {plan.neighborhood && <span className="text-[#bdb5a6]"> · {plan.neighborhood}</span>}
                     </span>
-                    <span className="shrink-0 text-[#bdb5a6]">▲ {plan.up}</span>
+                    <span className="shrink-0 text-[#bdb5a6]">▲ {plan.score}</span>
                   </Link>
                 </li>
               ))}

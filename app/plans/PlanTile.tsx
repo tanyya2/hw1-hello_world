@@ -48,7 +48,8 @@ export default function PlanTile({ id, plan, meta, votes, signedIn, rank }: Prop
 
       {/* Above the card-wide link, so the buttons get the clicks */}
       <div className="relative z-10 mt-auto pt-1">
-        <VoteButtons planId={id} initial={votes} signedIn={signedIn} />
+        {/* Keyed by the counts: after a vote refreshes the page, every copy of this plan shows the new numbers */}
+        <VoteButtons key={`${votes.up}:${votes.down}:${votes.mine}`} planId={id} initial={votes} signedIn={signedIn} />
       </div>
     </article>
   );

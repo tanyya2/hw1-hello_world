@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { vote } from "./actions";
 import type { Tally } from "./votes";
 
@@ -14,6 +15,7 @@ export default function VoteButtons({ planId, initial, signedIn }: Props) {
   const [tally, setTally] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startVote] = useTransition();
+  const router = useRouter();
 
   function cast(value: 1 | -1) {
     startVote(async () => {
@@ -24,6 +26,8 @@ export default function VoteButtons({ planId, initial, signedIn }: Props) {
         } else {
           setTally(result);
           setError(null);
+          // Re-rank the page (a vote can move a plan into or out of Top plans)
+          router.refresh();
         }
       } catch {
         setError("Something went wrong. Check your connection and try again.");

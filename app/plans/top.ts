@@ -25,7 +25,7 @@ export function authorOf(row: PlanRow) {
   return profile ? `${profile.first_name ?? ""} ${profile.last_name?.[0] ?? ""}`.trim() || null : null;
 }
 
-// All-time top plans by 👍 (no minimum yet: there aren't many users).
+// All-time top plans by score (👍 minus 👎), at least 1 point.
 // Ties go to the newer plan.
 export async function topPlans(count: number) {
   const supabase = await createClient();
@@ -35,8 +35,9 @@ export async function topPlans(count: number) {
     .order("created_at", { ascending: false })
     .limit(500);
   return ((data ?? []) as PlanRow[])
-    .map((row) => ({ row, up: row.votes.filter((vote) => vote.value === 1).length }))
-    .filter((plan) => plan.up > 0)
-    .sort((a, b) => b.up - a.up)
+    .map((row) => ({ row, score: row.votes.reduce((total, vote) => total + vote.value, 0) }))
+    .filter((plan) => plan.score >= 1)
+    // Rows come newest first and the sort is stable, so ties stay newest first
+    .sort((a, b) => b.score - a.score)
     .slice(0, count);
 }
