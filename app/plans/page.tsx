@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import PlanTile from "./PlanTile";
 import { PLAN_FIELDS, authorOf, parseContent, topPlans, type PlanRow } from "./top";
+import { tally } from "./votes";
 
 export const metadata: Metadata = { title: "Plans" };
 
@@ -47,8 +48,17 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
     const author = authorOf(row);
     const date = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const meta = [row.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ");
-    const up = row.votes.filter((vote) => vote.value === 1).length;
-    return <PlanTile key={row.id} id={row.id} plan={parseContent(row)} meta={meta} up={up} rank={rank} />;
+    return (
+      <PlanTile
+        key={row.id}
+        id={row.id}
+        plan={parseContent(row)}
+        meta={meta}
+        votes={tally(row.votes, userId)}
+        signedIn={!!userId}
+        rank={rank}
+      />
+    );
   };
 
   return (

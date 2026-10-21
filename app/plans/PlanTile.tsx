@@ -1,22 +1,25 @@
 import Link from "next/link";
 import type { PlanContent } from "@/app/explore/plan";
+import VoteButtons from "./VoteButtons";
+import type { Tally } from "./votes";
 
 type Props = {
   id: number;
   plan: PlanContent;
   // e.g. "Hell's Kitchen, Manhattan · by Sam K. · Oct 8"
   meta: string;
-  up: number;
+  votes: Tally;
+  signedIn: boolean;
   // Top plans: 1, 2 or 3
   rank?: number;
 };
 
-// Compact card for the plans grid: name and places. The whole card opens the plan page.
-export default function PlanTile({ id, plan, meta, up, rank }: Props) {
+// Compact card for the plans grid: name, places and votes. Clicking anywhere
+// but the vote buttons opens the plan page (the title link covers the card).
+export default function PlanTile({ id, plan, meta, votes, signedIn, rank }: Props) {
   return (
-    <Link
-      href={`/plans/${id}`}
-      className={`flex h-full flex-col gap-3 rounded-2xl border bg-card p-4 transition hover:border-ink ${
+    <article
+      className={`relative flex h-full flex-col gap-3 rounded-2xl border bg-card p-4 transition hover:border-ink ${
         rank ? "border-accent/40" : "border-line"
       }`}
     >
@@ -26,7 +29,11 @@ export default function PlanTile({ id, plan, meta, up, rank }: Props) {
             #{rank} top plan
           </span>
         )}
-        <h2 className="m-0 font-serif text-xl leading-snug font-medium">{plan.title}</h2>
+        <h2 className="m-0 font-serif text-xl leading-snug font-medium">
+          <Link href={`/plans/${id}`} className="after:absolute after:inset-0 after:rounded-2xl">
+            {plan.title}
+          </Link>
+        </h2>
         <p className="m-0 text-xs text-muted">{meta}</p>
       </div>
 
@@ -39,9 +46,10 @@ export default function PlanTile({ id, plan, meta, up, rank }: Props) {
         ))}
       </ol>
 
-      <p className="m-0 mt-auto pt-1 text-sm text-muted">
-        <span aria-label={`${up} likes`}>▲ {up}</span>
-      </p>
-    </Link>
+      {/* Above the card-wide link, so the buttons get the clicks */}
+      <div className="relative z-10 mt-auto pt-1">
+        <VoteButtons planId={id} initial={votes} signedIn={signedIn} />
+      </div>
+    </article>
   );
 }
