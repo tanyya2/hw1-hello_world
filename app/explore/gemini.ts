@@ -4,9 +4,8 @@ import { CATEGORIES, STOPS, type Category } from "./nyc";
 // Server-only: reads the API key.
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Free-tier limits are small and per model (e.g. 20 requests/day), and Google
-// Search lookups have their own daily limit. When one is used up we fall back
-// to the next model. `thinkingOff` skips extended reasoning (much faster);
+// Free-tier limits are small and per model (e.g. 20 requests/day). When one is
+// used up we fall back to the next model. `thinkingOff` skips extended reasoning (much faster);
 // the lite model doesn't accept that setting.
 const MODELS = [
   { name: "gemini-2.5-flash", thinkingOff: true },
@@ -91,35 +90,28 @@ Reply with only JSON, no other text:
 // Every model refused: out of free requests for today, or overloaded
 export class GeminiBusyError extends Error {}
 
-// Tries each model with Google Search first (unless `search: false`), then each without.
-// Refusals come back in well under a second, so falling through is quick.
-// Returns the reply, the prompt and model actually used, and the search
-// suggestions Google requires us to show alongside answers grounded in Search.
-export async function askGemini(promptFor: (search: boolean) => string, { search: useSearch = true } = {}) {
+// Tries each model in turn; refusals (e.g. a model's free daily limit) come back
+// in well under a second, so falling through is quick.
+// Returns the reply and the model actually used.
+export async function askGemini(prompt: string) {
   const failures: string[] = [];
-  for (const search of useSearch ? [true, false] : [false]) {
-    const prompt = promptFor(search);
-    for (const model of MODELS) {
-      const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          ...(search && { tools: [{ google_search: {} }] }),
-          ...(model.thinkingOff && { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
-        }),
-      });
-      if (!res.ok) {
-        failures.push(`${model.name}${search ? " +search" : ""}: ${res.status}`);
-        continue;
-      }
-
-      const data = await res.json();
-      const candidate = data.candidates?.[0];
-      const text: string = (candidate?.content?.parts ?? []).map((part: { text?: string }) => part.text ?? "").join("");
-      const searchSuggestions: string | null = candidate?.groundingMetadata?.searchEntryPoint?.renderedContent ?? null;
-      return { text, searchSuggestions, prompt, model: model.name };
+  for (const model of MODELS) {
+    const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        ...(model.thinkingOff && { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } }),
+      }),
+    });
+    if (!res.ok) {
+      failures.push(`${model.name}: ${res.status}`);
+      continue;
     }
+
+    const data = await res.json();
+    const text: string = (data.candidates?.[0]?.content?.parts ?? []).map((part: { text?: string }) => part.text ?? "").join("");
+    return { text, model: model.name };
   }
   throw new GeminiBusyError(`All Gemini models refused: ${failures.join(", ")}`);
 }

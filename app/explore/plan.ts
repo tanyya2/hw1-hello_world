@@ -41,9 +41,6 @@ export type PlanContent = {
   title: string;
   stops: PlanStop[];
   tip: string;
-  // Google's search suggestions (HTML), required next to answers grounded in
-  // Google Search. Only on plans from before the Google switch.
-  searchSuggestions: string | null;
 };
 
 export type Plan = PlanContent & { id: number; budget: string };
@@ -145,13 +142,13 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
     }
     const picked = chosen.filter((category) => places.some((place) => place.category === category));
 
-    const promptFor = () => buildPrompt({ start: label, purpose, budget }, places, picked);
+    const prompt = buildPrompt({ start: label, purpose, budget }, places, picked);
 
     // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
-    let reply = await askGemini(promptFor, { search: false });
+    let reply = await askGemini(prompt);
     let result = checkStops(parsePlan(reply.text, places.length), places, picked);
     if (!result) {
-      reply = await askGemini(promptFor, { search: false });
+      reply = await askGemini(prompt);
       result = checkStops(parsePlan(reply.text, places.length), places, picked);
     }
     if (!result) {
@@ -171,7 +168,6 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
         note: stop.note,
       })),
       tip: result.tip,
-      searchSuggestions: null,
     };
 
     // RLS: user_id defaults to the logged-in user, and users can only insert their own plans
@@ -183,7 +179,7 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
         // The candidates Gemini picked from: place ids only (Google's terms)
         places: places.map((place) => ({ id: place.id, category: place.category })),
         // The prompt and model that actually produced this plan
-        prompt: reply.prompt,
+        prompt,
         model: reply.model,
         content: JSON.stringify(content),
       })

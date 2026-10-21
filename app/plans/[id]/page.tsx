@@ -118,16 +118,6 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
         </p>
       )}
 
-      {/* Required by Google next to answers grounded in Google Search (plans from
-          before the Google Places switch). Sandboxed: it's Google's HTML. */}
-      {plan.searchSuggestions && (
-        <iframe
-          title="Google Search suggestions"
-          srcDoc={`<base target="_blank">${plan.searchSuggestions}`}
-          sandbox="allow-popups allow-popups-to-escape-sandbox"
-          className="h-14 w-full border-0"
-        />
-      )}
     </main>
   );
 }
