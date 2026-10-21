@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Chip from "@/app/components/Chip";
 import LocationPicker from "@/app/explore/LocationPicker";
-import PlanCard from "@/app/explore/PlanCard";
-import VoteButtons from "@/app/plans/VoteButtons";
 import type { Spot } from "@/app/explore/geocode";
 import { BUDGETS, CATEGORIES, RADII_MILES, type Category } from "@/app/explore/nyc";
-import { generatePlan, type Plan, type PlanResult } from "@/app/explore/plan";
+import { generatePlan, type PlanResult } from "@/app/explore/plan";
 
 const IDEAS = ["Coffee and books", "Cheap date", "Quick lunch", "Night out"];
 
@@ -21,7 +20,7 @@ export default function PlanMaker() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [openNow, setOpenNow] = useState(true);
   const [more, setMore] = useState(false);
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, startLoading] = useTransition();
 
@@ -49,8 +48,8 @@ export default function PlanMaker() {
       if ("error" in result) {
         setError(result.error);
       } else {
-        setPlan(result.plan);
-        setError(null);
+        // The new plan's own page, with everything on it
+        router.push(`/plans/${result.plan.id}`);
       }
     });
   }
@@ -176,13 +175,6 @@ export default function PlanMaker() {
         )}
       </div>
 
-      {plan && (
-        <div className="mt-4 w-full">
-          <PlanCard plan={plan}>
-            <VoteButtons key={plan.id} planId={plan.id} initial={{ up: 0, down: 0, mine: null }} signedIn />
-          </PlanCard>
-        </div>
-      )}
     </div>
   );
 }

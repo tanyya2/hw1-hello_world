@@ -74,7 +74,7 @@ export default async function Landing({ userId }: { userId: string | null }) {
               {mine.map((plan) => (
                 <li key={plan.id}>
                   <Link
-                    href="/plans?view=mine"
+                    href={`/plans/${plan.id}`}
                     className="flex h-full flex-col gap-1 rounded-xl border border-line bg-paper p-4 transition hover:border-ink"
                   >
                     <span className="font-medium">{plan.title}</span>
@@ -113,12 +113,14 @@ export default async function Landing({ userId }: { userId: string | null }) {
             </div>
             <ol className="m-0 flex flex-1 basis-[420px] list-none flex-col gap-3.5 p-0 text-[17px]">
               {top.map((plan) => (
-                <li key={plan.id} className="flex justify-between gap-4 border-b border-ink-soft pb-3.5 last:border-b-0">
-                  <span>
-                    {plan.title}
-                    {plan.neighborhood && <span className="text-[#bdb5a6]"> · {plan.neighborhood}</span>}
-                  </span>
-                  <span className="shrink-0 text-[#bdb5a6]">▲ {plan.up}</span>
+                <li key={plan.id} className="border-b border-ink-soft pb-3.5 last:border-b-0">
+                  <Link href={`/plans/${plan.id}`} className="flex justify-between gap-4 text-paper hover:text-white hover:underline">
+                    <span>
+                      {plan.title}
+                      {plan.neighborhood && <span className="text-[#bdb5a6]"> · {plan.neighborhood}</span>}
+                    </span>
+                    <span className="shrink-0 text-[#bdb5a6]">▲ {plan.up}</span>
+                  </Link>
                 </li>
               ))}
             </ol>
