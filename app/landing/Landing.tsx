@@ -67,7 +67,7 @@ export default async function Landing({ userId }: { userId: string | null }) {
       <section className="mx-auto w-full max-w-[1440px] px-5 pt-14 pb-16 sm:px-8 lg:px-12 sm:pt-[72px]">
         <div className="flex max-w-3xl flex-col gap-6">
           <h1 className="m-0 font-serif text-5xl leading-[1.02] font-medium tracking-[-0.02em] sm:text-[64px]">
-            Your next few hours in New York, planned for you
+            Your next few hours in New York planned for you
           </h1>
           <p className="m-0 max-w-[480px] text-[19px] leading-relaxed text-ink-soft">
             Real places near you that are open now, in an order you can walk, with the route and what it will cost.
