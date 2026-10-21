@@ -1,4 +1,4 @@
-import type { Place } from "./geoapify";
+import type { Place } from "./google";
 import { CATEGORIES, type Category } from "./nyc";
 
 // Server-only: reads the API key.
@@ -25,14 +25,14 @@ export type PlanRequest = {
 // What Gemini sends back: stops point at places by their number in the list
 export type GeminiPlan = {
   title: string;
-  stops: { place: number; minutes: number; rating: number | null; note: string }[];
+  stops: { place: number; minutes: number; note: string }[];
   tip: string;
 };
 
 // `required`: categories the user picked. Every plan has at least 3 different places:
-// 1–2 categories → 3 places from them; 3+ → one per category; none → 3–4 from different categories.
-// `search`: whether Gemini can use Google Search (for ratings) on this request.
-export function buildPrompt(request: PlanRequest, places: Place[], required: Category[], search: boolean) {
+// 1–2 categories → 3 places from them; 3+ → one per category; none → 3–4, mixed if possible.
+// Ratings, prices and opening hours come from Google, so Gemini doesn't search.
+export function buildPrompt(request: PlanRequest, places: Place[], required: Category[]) {
   // Places grouped under category headings, numbered across the whole list
   const list = (Object.keys(CATEGORIES) as Category[])
     .filter((category) => places.some((place) => place.category === category))
@@ -40,7 +40,13 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
       const lines = places.flatMap((place, i) =>
         place.category === category
           ? [
-              [`${i + 1}. ${place.name}`, place.cuisine, place.address, `${place.miles} mi away`, place.hours && `hours: ${place.hours}`]
+              [
+                `${i + 1}. ${place.name}`,
+                place.kind,
+                place.rating && `★ ${place.rating}${place.ratingCount ? ` (${place.ratingCount} reviews)` : ""}`,
+                place.price && `price ${place.price}`,
+                `${place.miles} mi away`,
+              ]
                 .filter(Boolean)
                 .join(" | "),
             ]
@@ -58,7 +64,7 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
         ? `Pick exactly 3 different places from ${labels[0]} and ${labels[1]}, with at least one from each.`
         : required.length > 2
           ? `Pick exactly one place from each of these categories: ${labels.join(", ")} (${required.length} places total).`
-          : "Pick 3 or 4 different places, each from a different category.";
+          : "Pick 3 or 4 different places, from different categories when you can.";
 
   return `You are planning an outing in New York City for a college student.
 
@@ -68,31 +74,27 @@ Request:
 - Budget: ${request.budget} ($ = cheap, $$ = moderate, $$$ = splurge)
 - Starting point: ${request.start}
 
-Nearby places (choose only from these, by number):
+Nearby places that are open now, with their Google rating and price (choose only from these, by number):
 ${list}
 
-${pick} Choose the places that best fit what it's for, the time and the budget, and put them in a sensible walking order.
-${
-    search
-      ? `Use Google Search to look up only the places you pick (one search per place): its Google rating and whether it's still open.
-If a pick has closed or is poorly rated, swap it for another place from the same category.`
-      : "Set every rating to null."
-  }
+${pick} Choose the places that best fit what it's for, the time and the budget, prefer well-rated ones, and put them in a sensible walking order.
+
+For each stop, write a note of 1 to 3 short sentences saying specifically what to do there: what to order, see or try, and anything worth knowing. Be concrete and only say things you're confident are true about that place; if you don't know it well, describe what to do there in general terms.
 
 Reply with only JSON, no other text:
-{"title": string (max 8 words), "stops": [{"place": number, "minutes": number, "rating": number or null (Google rating), "note": string (one short sentence: what to do there)}], "tip": string (one short practical tip)}`;
+{"title": string (max 8 words), "stops": [{"place": number, "minutes": number, "note": string (1–3 sentences: what to do there)}], "tip": string (one short practical tip for the whole outing)}`;
 }
 
 // Every model refused: out of free requests for today, or overloaded
 export class GeminiBusyError extends Error {}
 
-// Tries each model with Google Search first (real ratings), then each without.
+// Tries each model with Google Search first (unless `search: false`), then each without.
 // Refusals come back in well under a second, so falling through is quick.
 // Returns the reply, the prompt and model actually used, and the search
 // suggestions Google requires us to show alongside answers grounded in Search.
-export async function askGemini(promptFor: (search: boolean) => string) {
+export async function askGemini(promptFor: (search: boolean) => string, { search: useSearch = true } = {}) {
   const failures: string[] = [];
-  for (const search of [true, false]) {
+  for (const search of useSearch ? [true, false] : [false]) {
     const prompt = promptFor(search);
     for (const model of MODELS) {
       const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
@@ -133,10 +135,9 @@ export function parsePlan(text: string, placeCount: number): GeminiPlan | null {
         const n = stop.place;
         return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= placeCount;
       })
-      .map((stop: { place: number; minutes: unknown; rating: unknown; note: unknown }) => ({
+      .map((stop: { place: number; minutes: unknown; note: unknown }) => ({
         place: stop.place,
         minutes: typeof stop.minutes === "number" ? Math.round(stop.minutes) : 30,
-        rating: typeof stop.rating === "number" ? stop.rating : null,
         note: String(stop.note ?? ""),
       }));
     if (stops.length === 0) return null;

@@ -1,5 +1,5 @@
 import { CATEGORIES, formatMiles } from "./nyc";
-import type { Plan } from "./plan";
+import type { Plan, PlanStop } from "./plan";
 
 type Props = {
   plan: Plan;
@@ -8,6 +8,19 @@ type Props = {
   // e.g. vote buttons
   children?: React.ReactNode;
 };
+
+// Plain links (free, no API): the place on Google Maps, and a Google search for it.
+// Saved plans keep only the place id and name, which is enough for both.
+function mapsLink(stop: PlanStop) {
+  if (stop.mapsUrl) return stop.mapsUrl;
+  const params = new URLSearchParams({ api: "1", query: `${stop.name}, New York, NY` });
+  if (stop.placeId) params.set("query_place_id", stop.placeId);
+  return `https://www.google.com/maps/search/?${params}`;
+}
+
+function searchLink(stop: PlanStop) {
+  return `https://www.google.com/search?${new URLSearchParams({ q: `${stop.name} ${stop.address ?? "New York, NY"}` })}`;
+}
 
 export default function PlanCard({ plan, meta, children }: Props) {
   return (
@@ -30,14 +43,39 @@ export default function PlanCard({ plan, meta, children }: Props) {
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-baseline gap-x-2">
-                <span className="font-medium">{stop.name}</span>
-                {stop.rating && <span className="text-sm text-muted">★ {stop.rating}</span>}
+                {stop.mapsUrl ? (
+                  <a href={stop.mapsUrl} target="_blank" rel="noopener noreferrer" className="font-medium hover:text-accent hover:underline">
+                    {stop.name}
+                  </a>
+                ) : (
+                  <span className="font-medium">{stop.name}</span>
+                )}
+                {stop.rating && (
+                  <span className="text-sm text-muted">
+                    ★ {stop.rating}
+                    {stop.ratingCount ? ` (${stop.ratingCount.toLocaleString("en-US")})` : ""}
+                  </span>
+                )}
+                {stop.price && <span className="text-sm text-muted">{stop.price}</span>}
               </p>
-              <p className="text-sm">{stop.note}</p>
+              <p className="text-sm leading-relaxed">{stop.note}</p>
               <p className="text-xs text-muted">
-                {[CATEGORIES[stop.category].label, stop.address, formatMiles(stop.miles), `~${stop.minutes} min`]
+                {[
+                  CATEGORIES[stop.category].label,
+                  stop.address,
+                  stop.miles !== undefined && formatMiles(stop.miles),
+                  `~${stop.minutes} min`,
+                ]
                   .filter(Boolean)
                   .join(" · ")}
+              </p>
+              <p className="mt-1 flex gap-4 text-xs">
+                <a href={mapsLink(stop)} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  Google Maps ↗
+                </a>
+                <a href={searchLink(stop)} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
+                  Search on Google ↗
+                </a>
               </p>
             </div>
           </li>

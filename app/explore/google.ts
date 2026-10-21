@@ -10,7 +10,9 @@ const FIELDS = [
   "places.displayName",
   "places.location",
   "places.shortFormattedAddress",
+  "places.primaryType",
   "places.primaryTypeDisplayName",
+  "places.types",
   "places.rating",
   "places.userRatingCount",
   "places.priceLevel",
@@ -44,7 +46,9 @@ type GooglePlace = {
   displayName?: { text: string };
   location: { latitude: number; longitude: number };
   shortFormattedAddress?: string;
+  primaryType?: string;
   primaryTypeDisplayName?: { text: string };
+  types?: string[];
   rating?: number;
   userRatingCount?: number;
   priceLevel?: string;
@@ -75,9 +79,14 @@ function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
 // a campus are its lawns). Either way the list comes back closest first.
 export type Ranking = "closest" | "popular";
 
-// Up to 20 places of one category within the radius
-export async function fetchCategory(category: Category, lat: number, lon: number, radiusMiles: number, ranking: Ranking) {
-  const { google, primaryOnly } = CATEGORIES[category];
+// One Nearby Search request: up to 20 places matching `types` within the radius
+async function searchNearby(
+  types: { includedTypes: readonly string[] } | { includedPrimaryTypes: readonly string[] },
+  lat: number,
+  lon: number,
+  radiusMiles: number,
+  ranking: Ranking
+) {
   const res = await fetch(NEARBY, {
     method: "POST",
     headers: {
@@ -86,7 +95,7 @@ export async function fetchCategory(category: Category, lat: number, lon: number
       "X-Goog-FieldMask": FIELDS,
     },
     body: JSON.stringify({
-      [primaryOnly ? "includedPrimaryTypes" : "includedTypes"]: google,
+      ...types,
       maxResultCount: 20,
       rankPreference: ranking === "closest" ? "DISTANCE" : "POPULARITY",
       locationRestriction: {
@@ -96,32 +105,49 @@ export async function fetchCategory(category: Category, lat: number, lon: number
   });
   if (!res.ok) throw new Error(`Google Places ${res.status}: ${await res.text()}`);
   const data: { places?: GooglePlace[] } = await res.json();
-
-  return (data.places ?? [])
-    .filter((place) => place.displayName?.text)
-    .map(
-      (place): Place => ({
-        id: place.id,
-        name: place.displayName!.text,
-        category,
-        lat: place.location.latitude,
-        lon: place.location.longitude,
-        miles: milesBetween(lat, lon, place.location.latitude, place.location.longitude),
-        address: place.shortFormattedAddress ?? null,
-        kind: place.primaryTypeDisplayName?.text ?? null,
-        rating: place.rating ?? null,
-        ratingCount: place.userRatingCount ?? null,
-        price: (place.priceLevel && PRICES[place.priceLevel]) ?? null,
-        openNow: place.currentOpeningHours?.openNow ?? null,
-        mapsUrl: place.googleMapsUri ?? null,
-      })
-    )
-    .sort((a, b) => a.miles - b.miles);
+  return (data.places ?? []).filter((place) => place.displayName?.text);
 }
 
-// One request per category; all places together, closest first
+function toPlace(place: GooglePlace, category: Category, lat: number, lon: number): Place {
+  return {
+    id: place.id,
+    name: place.displayName!.text,
+    category,
+    lat: place.location.latitude,
+    lon: place.location.longitude,
+    miles: milesBetween(lat, lon, place.location.latitude, place.location.longitude),
+    address: place.shortFormattedAddress ?? null,
+    kind: place.primaryTypeDisplayName?.text ?? null,
+    rating: place.rating ?? null,
+    ratingCount: place.userRatingCount ?? null,
+    price: (place.priceLevel && PRICES[place.priceLevel]) ?? null,
+    openNow: place.currentOpeningHours?.openNow ?? null,
+    mapsUrl: place.googleMapsUri ?? null,
+  };
+}
+
+// Which of `categories` a place belongs to (the first match), or null
+function categoryOf(place: GooglePlace, categories: Category[]) {
+  return (
+    categories.find((category) => {
+      const { google, primaryOnly } = CATEGORIES[category];
+      const types: readonly string[] = google;
+      return primaryOnly
+        ? !!place.primaryType && types.includes(place.primaryType)
+        : (place.types ?? []).some((type) => types.includes(type));
+    }) ?? null
+  );
+}
+
+// Find places: one request per category; all places together, closest first
 export async function fetchNearby(categories: Category[], lat: number, lon: number, radiusMiles: number, ranking: Ranking) {
-  const lists = await Promise.all(categories.map((category) => fetchCategory(category, lat, lon, radiusMiles, ranking)));
+  const lists = await Promise.all(
+    categories.map(async (category) => {
+      const { google, primaryOnly } = CATEGORIES[category];
+      const types = primaryOnly ? { includedPrimaryTypes: google } : { includedTypes: google };
+      return (await searchNearby(types, lat, lon, radiusMiles, ranking)).map((place) => toPlace(place, category, lat, lon));
+    })
+  );
 
   // A place can match two categories (e.g. a bar that's also a club) — keep it once
   const seen = new Set<string>();
@@ -131,6 +157,18 @@ export async function fetchNearby(categories: Category[], lat: number, lon: numb
       if (seen.has(place.id)) return false;
       seen.add(place.id);
       return true;
+    })
+    .sort((a, b) => a.miles - b.miles);
+}
+
+// Plans: ONE request for all the categories together (the 20 most popular), closest first
+export async function fetchMix(categories: Category[], lat: number, lon: number, radiusMiles: number) {
+  const types = [...new Set(categories.flatMap((category) => CATEGORIES[category].google))];
+  const places = await searchNearby({ includedTypes: types }, lat, lon, radiusMiles, "popular");
+  return places
+    .flatMap((place) => {
+      const category = categoryOf(place, categories);
+      return category ? [toPlace(place, category, lat, lon)] : [];
     })
     .sort((a, b) => a.miles - b.miles);
 }
