@@ -74,18 +74,13 @@ function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
   return Math.round(miles * 10) / 10;
 }
 
-// "closest": the 20 nearest places (Find places). "popular": the 20 most popular
-// within the radius, so plans pick good places (by distance alone, "parks" near
-// a campus are its lawns). Either way the list comes back closest first.
-export type Ranking = "closest" | "popular";
-
-// One Nearby Search request: up to 20 places matching `types` within the radius
+// One Nearby Search request: the 20 most popular places matching `types` within
+// the radius (by distance alone, "parks" near a campus are its lawns)
 async function searchNearby(
   types: { includedTypes: readonly string[] } | { includedPrimaryTypes: readonly string[] },
   lat: number,
   lon: number,
-  radiusMiles: number,
-  ranking: Ranking
+  radiusMiles: number
 ) {
   const res = await fetch(NEARBY, {
     method: "POST",
@@ -97,7 +92,7 @@ async function searchNearby(
     body: JSON.stringify({
       ...types,
       maxResultCount: 20,
-      rankPreference: ranking === "closest" ? "DISTANCE" : "POPULARITY",
+      rankPreference: "POPULARITY",
       locationRestriction: {
         circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
       },
@@ -139,32 +134,17 @@ function categoryOf(place: GooglePlace, categories: Category[]) {
   );
 }
 
-// Find places: one request per category; all places together, closest first
-export async function fetchNearby(categories: Category[], lat: number, lon: number, radiusMiles: number, ranking: Ranking) {
-  const lists = await Promise.all(
-    categories.map(async (category) => {
-      const { google, primaryOnly } = CATEGORIES[category];
-      const types = primaryOnly ? { includedPrimaryTypes: google } : { includedTypes: google };
-      return (await searchNearby(types, lat, lon, radiusMiles, ranking)).map((place) => toPlace(place, category, lat, lon));
-    })
-  );
-
-  // A place can match two categories (e.g. a bar that's also a club) — keep it once
-  const seen = new Set<string>();
-  return lists
-    .flat()
-    .filter((place) => {
-      if (seen.has(place.id)) return false;
-      seen.add(place.id);
-      return true;
-    })
-    .sort((a, b) => a.miles - b.miles);
+// One category on its own, when the mix below didn't return any of it
+export async function fetchCategory(category: Category, lat: number, lon: number, radiusMiles: number) {
+  const { google, primaryOnly } = CATEGORIES[category];
+  const types = primaryOnly ? { includedPrimaryTypes: google } : { includedTypes: google };
+  return (await searchNearby(types, lat, lon, radiusMiles)).map((place) => toPlace(place, category, lat, lon));
 }
 
 // Plans: ONE request for all the categories together (the 20 most popular), closest first
 export async function fetchMix(categories: Category[], lat: number, lon: number, radiusMiles: number) {
   const types = [...new Set(categories.flatMap((category) => CATEGORIES[category].google))];
-  const places = await searchNearby({ includedTypes: types }, lat, lon, radiusMiles, "popular");
+  const places = await searchNearby({ includedTypes: types }, lat, lon, radiusMiles);
   return places
     .flatMap((place) => {
       const category = categoryOf(place, categories);

@@ -24,6 +24,11 @@ export default async function Header() {
           <Link href="/plans" className="text-[15px] hover:text-accent">
             Plans
           </Link>
+          {user && (
+            <Link href="/plan" className="text-[15px] hover:text-accent">
+              Make a plan
+            </Link>
+          )}
         </nav>
 
         {user ? <ProfileMenu avatarUrl={profile?.avatar_url ?? null} initials={initials} /> : <SignInButton />}

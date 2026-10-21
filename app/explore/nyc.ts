@@ -32,5 +32,12 @@ export function formatMiles(miles: number) {
 }
 
 // Plan options
-export const HOURS = [1, 2, 3] as const;
+export const STOPS = { min: 3, max: 4 };
+
+// Total time of a plan from its stops, e.g. 135 → "~2 h 15 min"
+export function formatDuration(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return `~${[h && `${h} h`, m && `${m} min`].filter(Boolean).join(" ") || "0 min"}`;
+}
 export const BUDGETS = ["$", "$$", "$$$"] as const;

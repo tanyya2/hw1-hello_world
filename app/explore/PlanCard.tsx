@@ -1,4 +1,4 @@
-import { CATEGORIES, formatMiles } from "./nyc";
+import { CATEGORIES, formatDuration, formatMiles } from "./nyc";
 import type { Plan, PlanStop } from "./plan";
 
 type Props = {
@@ -29,7 +29,7 @@ export default function PlanCard({ plan, meta, children }: Props) {
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-serif text-2xl font-medium">{plan.title}</h2>
           <span className="text-sm text-muted">
-            {plan.hours}h · {plan.budget}
+            {formatDuration(plan.stops.reduce((total, stop) => total + stop.minutes, 0))} · {plan.budget}
           </span>
         </div>
         {meta && <p className="text-xs text-muted">{meta}</p>}

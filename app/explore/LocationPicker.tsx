@@ -60,13 +60,13 @@ export default function LocationPicker({ spot, onChange }: Props) {
 
   if (spot) {
     return (
-      <p className="flex items-center justify-center gap-2">
+      <p className="m-0 flex items-center justify-center gap-2">
         <PinIcon />
         <span className="font-medium">{spot.label}</span>
-        <span className="text-zinc-400">·</span>
+        <span className="text-muted">·</span>
         <button
           onClick={() => onChange(null)}
-          className="text-sm text-zinc-500 underline underline-offset-4 hover:text-black dark:hover:text-white"
+          className="text-sm text-muted underline underline-offset-4 hover:text-ink"
         >
           Change
         </button>
@@ -80,7 +80,7 @@ export default function LocationPicker({ spot, onChange }: Props) {
         <button
           onClick={locateMe}
           disabled={busy}
-          className="flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className="flex h-10 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-card transition hover:bg-ink-soft disabled:opacity-50"
         >
           <PinIcon />
           {locating ? "Finding you…" : "Use my location"}
@@ -98,19 +98,19 @@ export default function LocationPicker({ spot, onChange }: Props) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Neighborhood or address"
             aria-label="Neighborhood or address"
-            className="min-w-0 flex-1 rounded-full border border-zinc-300 bg-transparent px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-400 focus:border-black dark:border-zinc-700 dark:focus:border-white"
+            className="h-10 min-w-0 flex-1 rounded-full border border-line-strong bg-transparent px-4 text-[15px] outline-none transition placeholder:text-muted focus:border-ink"
           />
           <button
             type="submit"
             disabled={busy || !query.trim()}
-            className="rounded-full border border-zinc-300 px-5 text-sm font-medium transition hover:border-black disabled:opacity-40 dark:border-zinc-700 dark:hover:border-white"
+            className="h-10 rounded-full border border-line-strong px-4 text-sm font-medium transition hover:border-ink disabled:opacity-40"
           >
             {searching ? "…" : "Go"}
           </button>
         </form>
       </div>
 
-      {error && <p role="alert" className="text-sm text-zinc-600 dark:text-zinc-400">{error}</p>}
+      {error && <p role="alert" className="m-0 text-sm text-ink-soft">{error}</p>}
     </div>
   );
 }

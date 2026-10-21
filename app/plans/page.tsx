@@ -82,7 +82,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
         return (
           <PlanCard
             key={row.id}
-            plan={{ ...content, id: row.id, hours: row.inputs?.hours, budget: row.inputs?.budget }}
+            plan={{ ...content, id: row.id, budget: row.inputs?.budget }}
             meta={[row.neighborhood, !mine && author && `by ${author}`, date].filter(Boolean).join(" · ")}
           >
             <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />

@@ -1,10 +1,10 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { fetchMix, type Place } from "./google";
+import { fetchCategory, fetchMix, type Place } from "./google";
 import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests } from "./googleLimit";
 import { GeminiBusyError, askGemini, buildPrompt, parsePlan, type GeminiPlan } from "./gemini";
-import { BUDGETS, CATEGORIES, HOURS, RADII_MILES, inNyc, type Category } from "./nyc";
+import { BUDGETS, CATEGORIES, RADII_MILES, STOPS, inNyc, type Category } from "./nyc";
 
 export type PlanInput = {
   lat: number;
@@ -13,8 +13,9 @@ export type PlanInput = {
   radiusMiles: number;
   categories: Category[];
   purpose: string;
-  hours: number;
   budget: string;
+  // Leave out places Google says are closed right now
+  openNow: boolean;
 };
 
 // Saved per stop: the Google place id and name, plus our own text. Google's terms
@@ -45,7 +46,7 @@ export type PlanContent = {
   searchSuggestions: string | null;
 };
 
-export type Plan = PlanContent & { id: number; hours: number; budget: string };
+export type Plan = PlanContent & { id: number; budget: string };
 
 export type PlanResult = { plan: Plan } | { error: string };
 
@@ -53,6 +54,7 @@ export type PlanResult = { plan: Plan } | { error: string };
 // Returns null when Gemini's plan can't satisfy them.
 function checkStops(plan: GeminiPlan | null, places: Place[], picked: Category[]): GeminiPlan | null {
   if (!plan) return null;
+  const { min, max } = STOPS;
   const categoryOf = (stop: GeminiPlan["stops"][number]) => places[stop.place - 1].category;
 
   // The same place twice → keep the first
@@ -63,29 +65,32 @@ function checkStops(plan: GeminiPlan | null, places: Place[], picked: Category[]
     return true;
   });
 
-  if (picked.length === 1 || picked.length === 2) {
-    // 3 places from the picked categories, each category at least once
-    stops = stops.filter((stop) => picked.includes(categoryOf(stop))).slice(0, 3);
-    const covered = picked.every((category) => stops.some((stop) => categoryOf(stop) === category));
-    return stops.length === 3 && covered ? { ...plan, stops } : null;
-  }
-
-  // Nothing picked: 3–4 different places (mixed categories are up to Gemini;
+  // Nothing picked: min–max places of any kind (mixing is up to Gemini;
   // the 20 popular places nearby may not cover many kinds)
   if (picked.length === 0) {
-    stops = stops.slice(0, 4);
-    return stops.length >= 3 ? { ...plan, stops } : null;
+    stops = stops.slice(0, max);
+    return stops.length >= min ? { ...plan, stops } : null;
   }
 
-  // 3+ picked: one place per category
-  const seen = new Set<Category>();
-  stops = stops.filter((stop) => {
-    const category = categoryOf(stop);
-    if (!picked.includes(category) || seen.has(category)) return false;
-    seen.add(category);
-    return true;
-  });
-  return seen.size === picked.length ? { ...plan, stops } : null;
+  stops = stops.filter((stop) => picked.includes(categoryOf(stop)));
+
+  // More picked than stops fit: `max` places, each from a different picked category
+  if (picked.length > max) {
+    const seen = new Set<Category>();
+    stops = stops
+      .filter((stop) => {
+        if (seen.has(categoryOf(stop))) return false;
+        seen.add(categoryOf(stop));
+        return true;
+      })
+      .slice(0, max);
+    return stops.length === max ? { ...plan, stops } : null;
+  }
+
+  // Otherwise: only picked categories, each at least once
+  stops = stops.slice(0, max);
+  const covered = picked.every((category) => stops.some((stop) => categoryOf(stop) === category));
+  return stops.length >= Math.max(min, picked.length) && covered ? { ...plan, stops } : null;
 }
 
 export async function generatePlan(input: PlanInput): Promise<PlanResult> {
@@ -93,12 +98,11 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims) return { error: "Sign in to make a plan." };
 
-  const { lat, lon, radiusMiles, hours, budget } = input;
+  const { lat, lon, radiusMiles, budget } = input;
   const label = String(input.label ?? "").slice(0, 100);
   const purpose = String(input.purpose ?? "").trim();
   if (!inNyc(lat, lon)) return { error: "Pick a location in NYC." };
   if (!RADII_MILES.includes(radiusMiles as (typeof RADII_MILES)[number])) return { error: "Pick a distance." };
-  if (!HOURS.includes(hours as (typeof HOURS)[number])) return { error: "Pick how much time you have." };
   if (!BUDGETS.includes(budget as (typeof BUDGETS)[number])) return { error: "Pick a budget." };
   if (purpose.length > 200) return { error: "Keep \"What for\" under 200 characters." };
 
@@ -109,17 +113,39 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
   if (!(await reserveGoogleRequests(supabase, 1))) return { error: GOOGLE_LIMIT_ERROR };
 
   try {
-    // One Google request: the 20 most popular places nearby, minus the ones closed right now
-    const places = (await fetchMix(categories, lat, lon, radiusMiles)).filter((place) => place.openNow !== false);
-    if (places.length === 0) return { error: "Nothing open nearby right now. Try a bigger distance or other categories." };
+    // One Google request: the 20 most popular places nearby across all the categories
+    let places = await fetchMix(categories, lat, lon, radiusMiles);
 
-    // Only ask for picked categories that actually have places nearby
-    const picked = chosen.filter((category) => places.some((place) => place.category === category));
-    if (chosen.length > 0 && picked.length === 0) {
-      return { error: "Nothing open nearby in those categories. Try a bigger distance or other categories." };
+    // A picked category can miss out when the others are more popular (no coffee among
+    // 20 restaurants and museums) → one extra request for each one that's missing
+    // (More than 4 picked: only 4 can be used anyway, so no extra requests.)
+    const allNeeded = chosen.length <= STOPS.max;
+    const missing = allNeeded ? chosen.filter((category) => !places.some((place) => place.category === category)) : [];
+    if (missing.length > 0) {
+      if (!(await reserveGoogleRequests(supabase, missing.length))) return { error: GOOGLE_LIMIT_ERROR };
+      const extra = (await Promise.all(missing.map((category) => fetchCategory(category, lat, lon, radiusMiles)))).flat();
+      const seen = new Set(places.map((place) => place.id));
+      places = [...places, ...extra.filter((place) => !seen.has(place.id))];
     }
 
-    const promptFor = () => buildPrompt({ start: label, purpose, hours, budget }, places, picked);
+    // Leave out places that are closed right now
+    const openNow = input.openNow !== false;
+    if (openNow) places = places.filter((place) => place.openNow !== false);
+    if (places.length === 0) {
+      return { error: `Nothing ${openNow ? "open " : ""}nearby right now. Try a bigger distance or other categories.` };
+    }
+
+    // Every picked category needs at least one place to choose from
+    const empty = allNeeded ? chosen.filter((category) => !places.some((place) => place.category === category)) : [];
+    if (empty.length > 0) {
+      const names = empty.map((category) => CATEGORIES[category].label).join(" or ");
+      return {
+        error: `No ${openNow ? "open " : ""}${names} places nearby. Try a bigger distance${openNow ? " or turn off Open now" : ""}.`,
+      };
+    }
+    const picked = chosen.filter((category) => places.some((place) => place.category === category));
+
+    const promptFor = () => buildPrompt({ start: label, purpose, budget }, places, picked);
 
     // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
     let reply = await askGemini(promptFor, { search: false });
@@ -153,7 +179,7 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
       .from("plans")
       .insert({
         neighborhood: label,
-        inputs: { radiusMiles, categories: chosen, purpose, hours, budget },
+        inputs: { radiusMiles, categories: chosen, purpose, budget, openNow },
         // The candidates Gemini picked from: place ids only (Google's terms)
         places: places.map((place) => ({ id: place.id, category: place.category })),
         // The prompt and model that actually produced this plan
@@ -178,7 +204,7 @@ export async function generatePlan(input: PlanInput): Promise<PlanResult> {
       price: place.price,
       mapsUrl: place.mapsUrl,
     }));
-    return { plan: { id: saved.id, ...content, stops, hours, budget } };
+    return { plan: { id: saved.id, ...content, stops, budget } };
   } catch (err) {
     console.error("generatePlan:", err);
     if (err instanceof GeminiBusyError) return { error: "The AI is out of free requests for today. Try again tomorrow." };

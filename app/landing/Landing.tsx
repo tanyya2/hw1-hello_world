@@ -40,9 +40,28 @@ async function topPlans() {
     .slice(0, 3);
 }
 
-// Home page for logged-out visitors. Making a plan needs sign-in; looking around doesn't.
-export default async function Landing() {
-  const top = await topPlans();
+// The signed-in user's 3 latest plans
+async function myPlans(userId: string) {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("plans")
+    .select("id, neighborhood, created_at, content")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    title: (JSON.parse(row.content) as PlanContent).title,
+    neighborhood: row.neighborhood,
+    date: new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  }));
+}
+
+const BUTTON = "min-h-14 rounded-full px-7 py-4 text-base";
+
+// Home for everyone. Making a plan needs sign-in; looking around doesn't.
+export default async function Landing({ userId }: { userId: string | null }) {
+  const [top, mine] = await Promise.all([topPlans(), userId ? myPlans(userId) : []]);
 
   return (
     <main className="flex-1">
@@ -55,14 +74,53 @@ export default async function Landing() {
             Real places near you that are open now, in an order you can walk, with the route and what it will cost.
           </p>
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <SignInButton variant="primary">Make my plan</SignInButton>
-            <a href="#example" className="px-5 py-4 font-medium hover:text-accent">
+            {userId ? (
+              <Link href="/plan" className={`${BUTTON} bg-accent font-semibold text-white hover:bg-[#174634]`}>
+                Make my plan
+              </Link>
+            ) : (
+              <SignInButton variant="primary" next="/plan">
+                Make my plan
+              </SignInButton>
+            )}
+            <Link href="/plans" className={`${BUTTON} border border-ink font-medium hover:bg-card`}>
+              Browse plans
+            </Link>
+            <a href="#example" className="px-3 py-4 font-medium hover:text-accent">
               See an example →
             </a>
           </div>
         </div>
         <RouteMap />
       </section>
+
+      {mine.length > 0 && (
+        <section className="mx-auto w-full max-w-[1440px] px-5 pb-14 sm:px-8 lg:px-12">
+          <div className="flex flex-col gap-4 rounded-2xl border border-line bg-card p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="m-0 font-serif text-2xl font-medium">Your plans</h2>
+              <Link href="/plans?view=mine" className="text-sm hover:text-accent">
+                See all →
+              </Link>
+            </div>
+            <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-3">
+              {mine.map((plan) => (
+                <li key={plan.id}>
+                  <Link
+                    href="/plans?view=mine"
+                    className="flex h-full flex-col gap-1 rounded-xl border border-line bg-paper p-4 transition hover:border-ink"
+                  >
+                    <span className="font-medium">{plan.title}</span>
+                    <span className="text-sm text-muted">
+                      {[plan.neighborhood, plan.date].filter(Boolean).join(" · ")}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       <section className="border-y border-line bg-card">
         <div className="mx-auto grid w-full max-w-[1440px] gap-10 px-5 py-14 sm:grid-cols-3 sm:px-8 lg:px-12">

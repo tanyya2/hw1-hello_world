@@ -1,5 +1,5 @@
 import type { Place } from "./google";
-import { CATEGORIES, type Category } from "./nyc";
+import { CATEGORIES, STOPS, type Category } from "./nyc";
 
 // Server-only: reads the API key.
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -18,7 +18,6 @@ const MODELS = [
 export type PlanRequest = {
   start: string;
   purpose: string;
-  hours: number;
   budget: string;
 };
 
@@ -29,8 +28,9 @@ export type GeminiPlan = {
   tip: string;
 };
 
-// `required`: categories the user picked. Every plan has at least 3 different places:
-// 1–2 categories → 3 places from them; 3+ → one per category; none → 3–4, mixed if possible.
+// `required`: categories the user picked. Every plan has 3–4 stops (STOPS). Picked
+// categories: stops only from them, each at least once; more than 4 picked → the
+// best-fitting 4. None picked → mixed if possible.
 // Ratings, prices and opening hours come from Google, so Gemini doesn't search.
 export function buildPrompt(request: PlanRequest, places: Place[], required: Category[]) {
   // Places grouped under category headings, numbered across the whole list
@@ -57,27 +57,30 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
     .join("\n\n");
 
   const labels = required.map((category) => CATEGORIES[category].label);
+  const { min, max } = STOPS;
+  const count = (low: number) => (low === max ? `exactly ${max}` : `${low} or ${max}`);
   const pick =
-    required.length === 1
-      ? `Pick exactly 3 different places, all from ${labels[0]}.`
-      : required.length === 2
-        ? `Pick exactly 3 different places from ${labels[0]} and ${labels[1]}, with at least one from each.`
-        : required.length > 2
-          ? `Pick exactly one place from each of these categories: ${labels.join(", ")} (${required.length} places total).`
-          : "Pick 3 or 4 different places, from different categories when you can.";
+    required.length === 0
+      ? `Pick ${count(min)} different places, from different categories when you can.`
+      : required.length === 1
+        ? `Pick ${count(min)} different places, all from ${labels[0]}.`
+        : required.length <= max
+          ? `Pick ${count(Math.max(min, required.length))} different places, only from ${labels.join(", ")}, with at least one from each of them.`
+          : `Pick exactly ${max} different places from ${max} different categories among ${labels.join(", ")}: the ones that fit the request best.`;
 
   return `You are planning an outing in New York City for a college student.
 
 Request:
 - What for (may include the vibe they want): ${request.purpose || "anything fun"}
-- Time available: ${request.hours} hour${request.hours === 1 ? "" : "s"}
 - Budget: ${request.budget} ($ = cheap, $$ = moderate, $$$ = splurge)
 - Starting point: ${request.start}
 
-Nearby places that are open now, with their Google rating and price (choose only from these, by number):
+Nearby places, with their Google rating and price (choose only from these, by number):
 ${list}
 
-${pick} Choose the places that best fit what it's for, the time and the budget, prefer well-rated ones, and put them in a sensible walking order.
+${pick} Choose the places that best fit what it's for and the budget, prefer well-rated ones, and put them in a sensible walking order.
+
+Give each stop a realistic number of minutes for that kind of place and what the person will do there. Typical times: coffee or dessert 20–40, bookstore 20–45, restaurant 45–75, bar 45–90, club 60–120, park 30–60, museum or gallery 60–120.
 
 For each stop, write a note of 1 to 3 short sentences saying specifically what to do there: what to order, see or try, and anything worth knowing. Be concrete and only say things you're confident are true about that place; if you don't know it well, describe what to do there in general terms.
 

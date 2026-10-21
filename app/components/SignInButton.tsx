@@ -6,6 +6,8 @@ import { createClient } from "@/utils/supabase/client";
 type Props = {
   // "outline" for the header, "primary" for big calls to action
   variant?: "outline" | "primary";
+  // Where to go after signing in, e.g. "/plan" (default: home)
+  next?: string;
   children?: React.ReactNode;
 };
 
@@ -15,11 +17,13 @@ const STYLES = {
 };
 
 // Google sign-in; Supabase sends the user back to /auth/callback
-export default function SignInButton({ variant = "outline", children }: Props) {
+export default function SignInButton({ variant = "outline", next, children }: Props) {
   const [loading, setLoading] = useState(false);
 
   async function signIn() {
     setLoading(true);
+    // Read by /auth/callback; a cookie keeps the return address Supabase checks unchanged
+    document.cookie = `after_sign_in=${encodeURIComponent(next ?? "/")}; path=/; max-age=600; samesite=lax`;
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

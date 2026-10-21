@@ -46,10 +46,21 @@ export async function GET(request: Request) {
         }
       }
 
-      // First name or last name missing → ask for them
+      // Where the sign-in button asked to go next; only paths on this site
+      const cookies = request.headers.get("cookie") ?? "";
+      let next = "/";
+      try {
+        next = decodeURIComponent(cookies.match(/(?:^|;\s*)after_sign_in=([^;]*)/)?.[1] ?? "/");
+      } catch {
+        // A garbled cookie just means home
+      }
+      const destination = next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/";
 
+      // First name or last name missing → ask for them first
       const hasName = profile?.first_name && profile?.last_name;
-      return NextResponse.redirect(`${origin}${hasName ? "/" : "/welcome"}`);
+      const response = NextResponse.redirect(`${origin}${hasName ? destination : "/welcome"}`);
+      response.cookies.delete("after_sign_in");
+      return response;
     }
     message = error.message;
   }
