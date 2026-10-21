@@ -15,7 +15,7 @@ import type { Spot } from "./geocode";
 
 const PlaceMap = dynamic(() => import("./PlaceMap"), {
   ssr: false,
-  loading: () => <div className="h-96 w-full rounded-2xl border border-zinc-200 dark:border-zinc-800" />,
+  loading: () => <div className="h-96 w-full rounded-2xl border border-line bg-map" />,
 });
 
 const COUNTS = [10, 20, 50];
