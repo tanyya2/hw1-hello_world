@@ -1,12 +1,13 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { fetchNearby, type Place } from "./geoapify";
+import { fetchNearby, type Place } from "./google";
+import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests } from "./googleLimit";
 import { CATEGORIES, RADII_MILES, inNyc, type Category } from "./nyc";
 
 export type PlacesResult = { places: Place[] } | { error: string };
 
-// Up to 50 closest places per category, each list sorted by distance
+// Up to 20 places per category from Google (one request each), each list sorted by distance
 export async function findPlaces(
   lat: number,
   lon: number,
@@ -24,8 +25,10 @@ export async function findPlaces(
   const picked = [...new Set(categories)].filter((category) => category in CATEGORIES);
   if (picked.length === 0) return { error: "Pick at least one category." };
 
+  if (!(await reserveGoogleRequests(supabase, picked.length))) return { error: GOOGLE_LIMIT_ERROR };
+
   try {
-    return { places: await fetchNearby(picked, lat, lon, radiusMiles, 50) };
+    return { places: await fetchNearby(picked, lat, lon, radiusMiles) };
   } catch (err) {
     console.error("findPlaces:", err);
     return { error: "Couldn't load places right now. Try again in a moment." };

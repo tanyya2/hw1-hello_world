@@ -10,7 +10,7 @@ import VoteButtons from "@/app/plans/VoteButtons";
 import { BUDGETS, CATEGORIES, HOURS, RADII_MILES, type Category } from "./nyc";
 import { findPlaces, type PlacesResult } from "./places";
 import { generatePlan, type Plan, type PlanResult } from "./plan";
-import type { Place } from "./geoapify";
+import type { Place } from "./google";
 import type { Spot } from "./geocode";
 
 const PlaceMap = dynamic(() => import("./PlaceMap"), {

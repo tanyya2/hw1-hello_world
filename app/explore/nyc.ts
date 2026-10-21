@@ -7,18 +7,27 @@ export function inNyc(lat: number, lon: number) {
 
 export const RADII_MILES = [1, 2, 3] as const;
 
+// `google`: Google place types. `primaryOnly` matches a place's main type only,
+// so a sandwich chain that also counts as a bakery isn't "Dessert".
 export const CATEGORIES = {
-  coffee: { label: "Coffee", geoapify: "catering.cafe" },
-  restaurants: { label: "Restaurants", geoapify: "catering.restaurant" },
-  bars: { label: "Bars", geoapify: "catering.bar,catering.pub" },
+  coffee: { label: "Coffee", geoapify: "catering.cafe", google: ["cafe", "coffee_shop"], primaryOnly: true },
+  restaurants: { label: "Restaurants", geoapify: "catering.restaurant", google: ["restaurant"], primaryOnly: false },
+  bars: { label: "Bars", geoapify: "catering.bar,catering.pub", google: ["bar", "pub", "wine_bar"], primaryOnly: false },
   // Only nightclubs: the wider "adult" category also has strip clubs
-  clubs: { label: "Clubs", geoapify: "adult.nightclub" },
-  museums: { label: "Museums", geoapify: "entertainment.museum,entertainment.culture.gallery" },
-  parks: { label: "Parks", geoapify: "leisure.park" },
-  bookstores: { label: "Bookstores", geoapify: "commercial.books" },
+  clubs: { label: "Clubs", geoapify: "adult.nightclub", google: ["night_club"], primaryOnly: false },
+  museums: {
+    label: "Museums",
+    geoapify: "entertainment.museum,entertainment.culture.gallery",
+    google: ["museum", "art_gallery"],
+    primaryOnly: false,
+  },
+  parks: { label: "Parks", geoapify: "leisure.park", google: ["park"], primaryOnly: false },
+  bookstores: { label: "Bookstores", geoapify: "commercial.books", google: ["book_store"], primaryOnly: true },
   dessert: {
     label: "Dessert",
     geoapify: "catering.ice_cream,commercial.food_and_drink.bakery,commercial.food_and_drink.confectionery",
+    google: ["bakery", "ice_cream_shop", "dessert_shop", "confectionery"],
+    primaryOnly: true,
   },
 } as const;
 

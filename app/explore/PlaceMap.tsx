@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { Spot } from "./geocode";
-import type { Place } from "./geoapify";
+import type { Place } from "./google";
 import { formatMiles } from "./nyc";
 
 const METERS_PER_MILE = 1609.34;
