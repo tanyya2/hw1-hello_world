@@ -7,7 +7,11 @@ const GEMINI = "https://generativelanguage.googleapis.com/v1beta/models";
 // Free-tier limits are small and per model (e.g. 20 requests/day). When one is
 // used up we fall back to the next model. `thinkingOff` skips extended reasoning (much faster);
 // the lite model doesn't accept that setting.
-const MODELS = [
+export type Model = { name: string; thinkingOff: boolean };
+
+// The admin sets the models and their order (LLM models page); this list is used
+// only when that can't be read (see loadModels in plan.ts)
+export const MODELS: Model[] = [
   { name: "gemini-2.5-flash", thinkingOff: true },
   { name: "gemini-3-flash-preview", thinkingOff: true },
   { name: "gemini-flash-latest", thinkingOff: true },
@@ -90,12 +94,16 @@ Reply with only JSON, no other text:
 // Every model refused: out of free requests for today, or overloaded
 export class GeminiBusyError extends Error {}
 
+// One call to one model, for the admin's LLM responses log
+export type GeminiAttempt = { model: string; ok: boolean; httpStatus: number; text: string; ms: number };
+
 // Tries each model in turn; refusals (e.g. a model's free daily limit) come back
 // in well under a second, so falling through is quick.
-// Returns the reply and the model actually used.
-export async function askGemini(prompt: string) {
+// Returns the reply and the model actually used. `attempts` collects every call made.
+export async function askGemini(prompt: string, attempts: GeminiAttempt[] = [], models: Model[] = MODELS) {
   const failures: string[] = [];
-  for (const model of MODELS) {
+  for (const model of models) {
+    const started = Date.now();
     const res = await fetch(`${GEMINI}/${model.name}:generateContent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY! },
@@ -106,11 +114,15 @@ export async function askGemini(prompt: string) {
     });
     if (!res.ok) {
       failures.push(`${model.name}: ${res.status}`);
+      // Google's error message, shortened
+      const error = (await res.text().catch(() => "")).slice(0, 2000);
+      attempts.push({ model: model.name, ok: false, httpStatus: res.status, text: error, ms: Date.now() - started });
       continue;
     }
 
     const data = await res.json();
     const text: string = (data.candidates?.[0]?.content?.parts ?? []).map((part: { text?: string }) => part.text ?? "").join("");
+    attempts.push({ model: model.name, ok: true, httpStatus: res.status, text, ms: Date.now() - started });
     return { text, model: model.name };
   }
   throw new GeminiBusyError(`All Gemini models refused: ${failures.join(", ")}`);

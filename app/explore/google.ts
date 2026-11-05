@@ -27,6 +27,8 @@ export type Place = {
   id: string;
   name: string;
   category: Category;
+  // Every searched category it fits: a pub can be a restaurant and a bar, but counts as one
+  fits: Category[];
   lat: number;
   lon: number;
   miles: number;
@@ -103,11 +105,12 @@ async function searchNearby(
   return (data.places ?? []).filter((place) => place.displayName?.text);
 }
 
-function toPlace(place: GooglePlace, category: Category, lat: number, lon: number): Place {
+function toPlace(place: GooglePlace, fits: Category[], lat: number, lon: number): Place {
   return {
     id: place.id,
     name: place.displayName!.text,
-    category,
+    category: fits[0],
+    fits,
     lat: place.location.latitude,
     lon: place.location.longitude,
     miles: milesBetween(lat, lon, place.location.latitude, place.location.longitude),
@@ -121,24 +124,22 @@ function toPlace(place: GooglePlace, category: Category, lat: number, lon: numbe
   };
 }
 
-// Which of `categories` a place belongs to (the first match), or null
-function categoryOf(place: GooglePlace, categories: Category[]) {
-  return (
-    categories.find((category) => {
-      const { google, primaryOnly } = CATEGORIES[category];
-      const types: readonly string[] = google;
-      return primaryOnly
-        ? !!place.primaryType && types.includes(place.primaryType)
-        : (place.types ?? []).some((type) => types.includes(type));
-    }) ?? null
-  );
+// Which of `categories` a place fits, in their order (the first one is its category)
+function categoriesOf(place: GooglePlace, categories: Category[]) {
+  return categories.filter((category) => {
+    const { google, primaryOnly } = CATEGORIES[category];
+    const types: readonly string[] = google;
+    return primaryOnly
+      ? !!place.primaryType && types.includes(place.primaryType)
+      : (place.types ?? []).some((type) => types.includes(type));
+  });
 }
 
-// One category on its own, when the mix below didn't return any of it
+// One category on its own, when the mix below didn't return any (open) place of it
 export async function fetchCategory(category: Category, lat: number, lon: number, radiusMiles: number) {
   const { google, primaryOnly } = CATEGORIES[category];
   const types = primaryOnly ? { includedPrimaryTypes: google } : { includedTypes: google };
-  return (await searchNearby(types, lat, lon, radiusMiles)).map((place) => toPlace(place, category, lat, lon));
+  return (await searchNearby(types, lat, lon, radiusMiles)).map((place) => toPlace(place, [category], lat, lon));
 }
 
 // Plans: ONE request for all the categories together (the 20 most popular), closest first
@@ -147,8 +148,8 @@ export async function fetchMix(categories: Category[], lat: number, lon: number,
   const places = await searchNearby({ includedTypes: types }, lat, lon, radiusMiles);
   return places
     .flatMap((place) => {
-      const category = categoryOf(place, categories);
-      return category ? [toPlace(place, category, lat, lon)] : [];
+      const fits = categoriesOf(place, categories);
+      return fits.length ? [toPlace(place, fits, lat, lon)] : [];
     })
     .sort((a, b) => a.miles - b.miles);
 }
