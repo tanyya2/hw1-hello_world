@@ -78,22 +78,30 @@ async function searchNearby(
   lon: number,
   radiusMiles: number
 ) {
-  const res = await fetch(NEARBY, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": process.env.GOOGLE_MAPS_SERVER_KEY!,
-      "X-Goog-FieldMask": FIELDS,
-    },
-    body: JSON.stringify({
-      ...types,
-      maxResultCount: 20,
-      rankPreference: "POPULARITY",
-      locationRestriction: {
-        circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
+  const request = () =>
+    fetch(NEARBY, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": process.env.GOOGLE_MAPS_SERVER_KEY!,
+        "X-Goog-FieldMask": FIELDS,
       },
-    }),
-  });
+      body: JSON.stringify({
+        ...types,
+        maxResultCount: 20,
+        rankPreference: "POPULARITY",
+        locationRestriction: {
+          circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
+        },
+      }),
+    });
+  let res = await request();
+  // Google's own error (5xx, "Please retry") is usually gone a moment later: try once more.
+  // Not for 4xx (bad key, over the limit), which a retry won't fix.
+  if (res.status >= 500) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    res = await request();
+  }
   if (!res.ok) throw new Error(`Google Places ${res.status}: ${await res.text()}`);
   const data: { places?: GooglePlace[] } = await res.json();
   return (data.places ?? []).filter((place) => place.displayName?.text);
