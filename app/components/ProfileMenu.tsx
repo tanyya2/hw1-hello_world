@@ -10,7 +10,7 @@ type Props = {
   initials: string;
 };
 
-const ITEM = "block w-full px-4 py-2 text-left text-sm hover:bg-zinc-100 dark:hover:bg-zinc-900";
+const ITEM = "block w-full px-4 py-2 text-left text-sm hover:bg-paper";
 
 export default function ProfileMenu({ avatarUrl, initials }: Props) {
   const [open, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export default function ProfileMenu({ avatarUrl, initials }: Props) {
         onClick={() => setOpen(!open)}
         aria-label="Profile menu"
         aria-expanded={open}
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-zinc-200 text-sm font-semibold text-zinc-600 ring-offset-2 transition hover:ring-2 hover:ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-offset-black dark:hover:ring-zinc-700"
+        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-accent text-sm font-semibold text-white ring-offset-2 ring-offset-paper transition hover:ring-2 hover:ring-accent/30"
       >
         {avatarUrl ? (
           <Image src={avatarUrl} alt="" width={36} height={36} className="h-9 w-9 object-cover" />
@@ -51,7 +51,7 @@ export default function ProfileMenu({ avatarUrl, initials }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-zinc-200 bg-white py-1 shadow-lg dark:border-zinc-800 dark:bg-black">
+        <div className="absolute right-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-line bg-card py-1 shadow-lg">
           <Link href="/profile" onClick={close} className={ITEM}>
             Profile
           </Link>
@@ -61,7 +61,7 @@ export default function ProfileMenu({ avatarUrl, initials }: Props) {
           <Link href="/plans?view=mine" onClick={close} className={ITEM}>
             My plans
           </Link>
-          <form action={signOut} className="border-t border-zinc-200 dark:border-zinc-800">
+          <form action={signOut} className="border-t border-line">
             <button className={ITEM}>Sign out</button>
           </form>
         </div>

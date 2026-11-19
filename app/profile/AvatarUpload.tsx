@@ -60,7 +60,7 @@ export default function AvatarUpload({ userId, avatarUrl, initials }: Props) {
           className="h-20 w-20 rounded-full object-cover"
         />
       ) : (
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-200 text-xl font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-accent font-serif text-3xl text-white">
           {initials}
         </div>
       )}
@@ -76,7 +76,11 @@ export default function AvatarUpload({ userId, avatarUrl, initials }: Props) {
             className="hidden"
           />
         </label>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p role="alert" className="m-0 text-sm text-ink-soft">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );

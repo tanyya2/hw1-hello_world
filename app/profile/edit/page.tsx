@@ -22,9 +22,9 @@ export default async function EditProfile() {
     `${profile?.first_name?.[0] ?? ""}${profile?.last_name?.[0] ?? ""}`.toUpperCase() || "?";
 
   return (
-    <main className="flex flex-1 justify-center p-8">
+    <main className="flex flex-1 justify-center px-5 pt-4 pb-10 sm:px-8">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <h1 className="text-2xl font-semibold">Edit profile</h1>
+        <h1 className="m-0 font-serif text-4xl font-medium">Edit profile</h1>
 
         <AvatarUpload
           userId={user.sub}
