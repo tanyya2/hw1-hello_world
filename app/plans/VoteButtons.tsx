@@ -47,8 +47,8 @@ export default function VoteButtons({ planId, initial, signedIn }: Props) {
           </VoteButton>
         </div>
         {/* Under the buttons, centered */}
-        {error && <span className="text-center text-xs text-zinc-500">{error}</span>}
-        {!signedIn && <span className="text-xs text-zinc-500">Sign in to vote</span>}
+        {error && <span className="text-center text-xs text-muted">{error}</span>}
+        {!signedIn && <span className="text-xs text-muted">Sign in to vote</span>}
       </div>
     </div>
   );
@@ -72,8 +72,8 @@ function VoteButton({ label, count, active, disabled, onClick, children }: Butto
       aria-pressed={active}
       className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition disabled:cursor-default ${
         active
-          ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
-          : "border-zinc-300 text-zinc-600 enabled:hover:border-black dark:border-zinc-700 dark:text-zinc-400 dark:enabled:hover:border-white"
+          ? "border-accent bg-accent text-white"
+          : "border-line-strong text-ink-soft enabled:hover:border-ink"
       }`}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4" aria-hidden="true">
