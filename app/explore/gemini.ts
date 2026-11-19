@@ -33,6 +33,14 @@ export type GeminiPlan = {
   tip: string;
 };
 
+// "9:00 PM" in New York, or "Sat 2:00 AM" when it's not today
+function closingTime(at: number) {
+  const nyc = (options: Intl.DateTimeFormatOptions) => new Date(at).toLocaleString("en-US", { timeZone: "America/New_York", ...options });
+  const today = new Date().toLocaleDateString("en-US", { timeZone: "America/New_York" });
+  const time = nyc({ hour: "numeric", minute: "2-digit" });
+  return nyc({ year: "numeric", month: "numeric", day: "numeric" }) === today ? time : `${nyc({ weekday: "short" })} ${time}`;
+}
+
 // `required`: categories the user picked. One stop from each of them; more than 4
 // picked → the best-fitting 4. None picked → 3–4 stops (STOPS), mixed if possible.
 // Ratings, prices and opening hours come from Google, so Gemini doesn't search.
@@ -50,6 +58,8 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
                 place.rating && `★ ${place.rating}${place.ratingCount ? ` (${place.ratingCount} reviews)` : ""}`,
                 place.price && `price ${place.price}`,
                 `${place.miles} mi away`,
+                // Open now on: when it closes, so the plan fits (open 24 hours: no time)
+                request.now && place.closesAt !== null && `closes ${closingTime(place.closesAt)}`,
               ]
                 .filter(Boolean)
                 .join(" | "),

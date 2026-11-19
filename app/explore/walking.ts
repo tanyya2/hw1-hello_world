@@ -28,14 +28,21 @@ function orders<T>(items: T[]): T[][] {
 }
 
 // The order with the shortest walk from `start` through every stop, night spots last.
-// `placeOf` gives each stop's location and category.
-export function walkingOrder<T>(start: Point, stops: T[], placeOf: (stop: T) => Point & { category: Category }): T[] {
-  let best = stops;
+// `placeOf` gives each stop's location and category. `fits` can rule out more orders
+// (e.g. a stop closes before you'd leave it); null when it rules out all of them.
+export function walkingOrder<T>(
+  start: Point,
+  stops: T[],
+  placeOf: (stop: T) => Point & { category: Category },
+  fits: (order: T[]) => boolean = () => true,
+): T[] | null {
+  let best: T[] | null = null;
   let bestMiles = Infinity;
   for (const order of orders(stops)) {
     const places = order.map(placeOf);
     const firstLate = places.findIndex((place) => LATE.includes(place.category));
     if (firstLate !== -1 && places.slice(firstLate).some((place) => !LATE.includes(place.category))) continue;
+    if (!fits(order)) continue;
     const miles = places.reduce((total, place, i) => total + milesBetween(i === 0 ? start : places[i - 1], place), 0);
     if (miles < bestMiles) {
       best = order;

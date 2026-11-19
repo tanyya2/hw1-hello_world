@@ -87,6 +87,24 @@ function checkStops(plan: GeminiPlan | null, places: Place[], picked: Category[]
   return stops.length === Math.min(picked.length, max) ? { ...plan, stops } : null;
 }
 
+// A stop in Gemini's plan with its place
+type Pick = { stop: GeminiPlan["stops"][number]; place: Place };
+
+function picksOf(plan: GeminiPlan, places: Place[]): Pick[] {
+  return plan.stops.map((stop) => ({ stop, place: places[stop.place - 1] }));
+}
+
+// The stops (in this order, starting at `startedAt`) that close before you'd leave them:
+// time at each stop plus the walks between them
+function closingTooSoon(order: Pick[], startedAt: number) {
+  let time = startedAt;
+  return order.filter(({ stop, place }, i) => {
+    if (i > 0) time += walkMinutes(order[i - 1].place, place) * 60_000;
+    time += stop.minutes * 60_000;
+    return place.closesAt !== null && time > place.closesAt;
+  });
+}
+
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 // Moves a place that fits a missing category too (a pub counted as a restaurant is also a
@@ -257,28 +275,39 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
     const now = openNow
       ? new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", hour: "numeric", minute: "2-digit" })
       : undefined;
-    const prompt = buildPrompt({ start: label, now, purpose, budget }, places, picked);
+    let prompt = buildPrompt({ start: label, now, purpose, budget }, places, picked);
 
-    // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
+    // Gemini picks the stops; we set the walking order. Open now on: every stop must still be
+    // open when you leave it, so orders where one closes first are out.
+    const startedAt = Date.now();
+    const fits = (order: Pick[]) => !openNow || closingTooSoon(order, startedAt).length === 0;
+    const placeOf = (pick: Pick) => pick.place;
+
+    // If Gemini's plan breaks the rules (too few places, missing a category) or no order keeps
+    // every stop open, ask once more (telling it which places close too soon)
     const models = await loadModels(supabase);
     let reply = await askGemini(prompt, attempts, models);
     let result = checkStops(parsePlan(reply.text, places.length), places, picked);
-    if (!result) {
+    let picks = result && walkingOrder({ lat, lon }, picksOf(result, places), placeOf, fits);
+    if (!picks) {
+      const tooSoon = result ? closingTooSoon(walkingOrder({ lat, lon }, picksOf(result, places), placeOf)!, startedAt) : [];
+      if (tooSoon.length > 0) {
+        const numbers = tooSoon.map(({ stop }) => stop.place).join(", ");
+        prompt += `\n\nThese places close before the outing would be over there, so don't pick them: ${numbers}.`;
+      }
       reply = await askGemini(prompt, attempts, models);
       result = checkStops(parsePlan(reply.text, places.length), places, picked);
+      picks = result && walkingOrder({ lat, lon }, picksOf(result, places), placeOf, fits);
     }
     if (!result) {
       console.error("generatePlan: unusable Gemini reply", reply.text);
       log.reason = "Gemini's reply broke the plan rules twice (wrong number of stops, a missing category or not JSON). Its replies are in LLM responses.";
       return { error: "Couldn't make a plan this time. Try again." };
     }
-
-    // Gemini picks the stops; we set the walking order
-    const picks = walkingOrder(
-      { lat, lon },
-      result.stops.map((stop) => ({ stop, place: places[stop.place - 1] })),
-      (pick) => pick.place,
-    );
+    if (!picks) {
+      log.reason = "Twice, a stop in Gemini's plan closed before the outing would be over there, in every walking order.";
+      return { error: "Places nearby close too soon for a full plan. Try other categories or turn off Open now." };
+    }
     // What we store: place id and name, plus Gemini's text
     const content: PlanContent = {
       title: result.title,

@@ -18,6 +18,7 @@ const FIELDS = [
   "places.userRatingCount",
   "places.priceLevel",
   "places.currentOpeningHours.openNow",
+  "places.currentOpeningHours.nextCloseTime",
   "places.googleMapsUri",
 ].join(",");
 
@@ -41,6 +42,8 @@ export type Place = {
   // "$" to "$$$$", or null when Google doesn't know
   price: string | null;
   openNow: boolean | null;
+  // When it closes next (ms timestamp), if it's open now; null when Google doesn't say (e.g. open 24 hours)
+  closesAt: number | null;
   mapsUrl: string | null;
 };
 
@@ -55,7 +58,7 @@ type GooglePlace = {
   rating?: number;
   userRatingCount?: number;
   priceLevel?: string;
-  currentOpeningHours?: { openNow?: boolean };
+  currentOpeningHours?: { openNow?: boolean; nextCloseTime?: string };
   googleMapsUri?: string;
 };
 
@@ -112,6 +115,7 @@ function toPlace(place: GooglePlace, fits: Category[], lat: number, lon: number)
     ratingCount: place.userRatingCount ?? null,
     price: (place.priceLevel && PRICES[place.priceLevel]) ?? null,
     openNow: place.currentOpeningHours?.openNow ?? null,
+    closesAt: place.currentOpeningHours?.nextCloseTime ? Date.parse(place.currentOpeningHours.nextCloseTime) : null,
     mapsUrl: place.googleMapsUri ?? null,
   };
 }
