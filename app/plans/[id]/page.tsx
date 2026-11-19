@@ -33,8 +33,6 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
 
   const plan = parseContent(row);
   const minutes = plan.stops.reduce((total, stop) => total + stop.minutes, 0);
-  const { lat, lon } = row.inputs ?? {};
-  const start = lat !== undefined && lon !== undefined ? { lat, lon } : undefined;
   const author = authorOf(row);
   const date = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const facts = [
@@ -66,24 +64,13 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
 
       <div className="flex flex-wrap items-center gap-3">
         <a
-          href={walkingLink(plan.stops, start)}
+          href={walkingLink(plan.stops)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-10 items-center rounded-full bg-accent px-5 text-sm font-semibold text-white transition hover:bg-[#174634]"
         >
           Start walking ↗
         </a>
-        {/* For someone who isn't at the starting point (e.g. opened a shared link at home) */}
-        {start && (
-          <a
-            href={walkingLink(plan.stops)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-accent hover:underline"
-          >
-            From my location ↗
-          </a>
-        )}
         <CopyLink />
         <div className="ml-auto">
           <VoteButtons planId={row.id} initial={tally(row.votes, userId)} signedIn={!!userId} />
