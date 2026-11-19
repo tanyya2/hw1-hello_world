@@ -111,6 +111,10 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
           </li>
         ))}
       </ol>
+      {/* Google's terms: credit Google Maps next to its place data (plans from before the Google switch have none) */}
+      {plan.stops.some((stop) => stop.placeId) && (
+        <p className="-mt-6 text-right text-xs text-muted/70">Google Maps</p>
+      )}
 
       {plan.tip && (
         <p className="m-0 rounded-2xl border border-line bg-card p-4 text-sm leading-relaxed">
