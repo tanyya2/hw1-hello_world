@@ -15,7 +15,7 @@ export default async function Header() {
     `${profile?.first_name?.[0] ?? ""}${profile?.last_name?.[0] ?? ""}`.toUpperCase() || "?";
 
   return (
-    <header className="border-b border-line">
+    <header className="relative z-10 border-b border-line bg-paper/65">
       <div className="flex w-full items-center justify-between gap-4 px-4 py-4 sm:px-6">
         <nav className="flex items-center gap-6 sm:gap-8">
           <Link href="/" className="font-serif text-2xl font-semibold tracking-tight sm:text-[28px]">
