@@ -252,7 +252,12 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       return { error: `Not enough ${openNow ? "open " : ""}places nearby. Try a bigger distance or other categories.` };
     }
 
-    const prompt = buildPrompt({ start: label, purpose, budget }, places, picked);
+    // Open now on: the plan starts now, "Friday 8:30 PM" in New York (the server's clock may be
+    // elsewhere). Off: it's for some other time, so the time doesn't matter.
+    const now = openNow
+      ? new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", hour: "numeric", minute: "2-digit" })
+      : undefined;
+    const prompt = buildPrompt({ start: label, now, purpose, budget }, places, picked);
 
     // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
     const models = await loadModels(supabase);

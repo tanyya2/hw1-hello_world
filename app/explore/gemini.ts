@@ -20,6 +20,8 @@ export const MODELS: Model[] = [
 
 export type PlanRequest = {
   start: string;
+  // When the outing starts, in New York time: "Friday 8:30 PM". None when Open now is off.
+  now?: string;
   purpose: string;
   budget: string;
 };
@@ -73,12 +75,12 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
 Request:
 - What for (may include the vibe they want): ${request.purpose || "anything fun"}
 - Budget: ${request.budget} ($ = cheap, $$ = moderate, $$$ = splurge)
-- Starting point: ${request.start}
+- Starting point: ${request.start}${request.now ? `\n- Starting time: now, ${request.now}` : ""}
 
 Nearby places, with their Google rating and price (choose only from these, by number):
 ${list}
 
-${pick} Choose the places that best fit what it's for and the budget, prefer well-rated ones. We put the stops in walking order ourselves, so don't mention their order in the notes.
+${pick} Choose the places that best fit what it's for and the budget, prefer well-rated ones${request.now ? ", and make sense for the day and time of day" : ""}. We put the stops in walking order ourselves, so don't mention their order in the notes.
 
 Give each stop a realistic number of minutes for that kind of place and what the person will do there. Typical times: coffee or dessert 20–40, bookstore 20–45, restaurant 45–75, bar 45–90, club 60–120, park 30–60, museum or gallery 60–120.
 
