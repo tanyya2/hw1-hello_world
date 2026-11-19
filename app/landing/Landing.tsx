@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import SignInButton from "@/app/components/SignInButton";
 import { parseContent, topPlans } from "@/app/plans/top";
+import MapBackground from "./MapBackground";
 
 const STEPS = [
   { title: "Where", text: "Use your location or pick a neighborhood, like Williamsburg or the West Village." },
@@ -35,7 +36,9 @@ export default async function Landing({ userId }: { userId: string | null }) {
   const top = best.map(({ row, score }) => ({ id: row.id, title: parseContent(row).title, neighborhood: row.neighborhood, score }));
 
   return (
-    <main className="flex-1">
+    <main className="relative isolate flex-1">
+      <MapBackground />
+
       <section className="mx-auto w-full max-w-[1440px] px-5 pt-14 pb-16 sm:px-8 lg:px-12 sm:pt-[72px]">
         <div className="flex max-w-3xl flex-col gap-6">
           <h1 className="m-0 font-serif text-5xl leading-[1.02] font-medium tracking-[-0.02em] sm:text-[64px]">
