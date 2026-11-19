@@ -2,10 +2,9 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { BUTTON } from "@/app/components/buttons";
+import { INPUT } from "@/app/components/fields";
 import { updateProfile } from "./actions";
-
-const inputClass =
-  "rounded-lg border border-zinc-300 bg-white px-3 py-2 text-black dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50";
 
 type Props = {
   firstName: string;
@@ -20,35 +19,39 @@ export default function ProfileForm({ firstName, lastName, bio }: Props) {
     <form action={formAction} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm">
         First name
-        <input name="first_name" required defaultValue={firstName} className={inputClass} />
+        <input name="first_name" required defaultValue={firstName} className={INPUT} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Last name
-        <input name="last_name" required defaultValue={lastName} className={inputClass} />
+        <input name="last_name" required defaultValue={lastName} className={INPUT} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        Bio <span className="text-zinc-500">(optional)</span>
-        <textarea name="bio" rows={3} defaultValue={bio} className={inputClass} />
+        Bio <span className="text-muted">(optional)</span>
+        <textarea name="bio" rows={3} defaultValue={bio} className={INPUT} />
       </label>
 
       <div className="flex gap-3">
         <Link
           href="/profile"
-          className="flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          className={`${BUTTON.secondary} flex-1`}
         >
           Cancel
         </Link>
         <button
           disabled={pending}
-          className="flex-1 rounded-full bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className={`${BUTTON.primarySmallPlain} flex-1`}
         >
           {pending ? "Saving…" : "Save"}
         </button>
       </div>
 
-      {error && <p className="text-center text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="m-0 text-center text-sm text-ink-soft">
+          {error}
+        </p>
+      )}
     </form>
   );
 }

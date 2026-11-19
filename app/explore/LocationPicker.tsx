@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { reverseGeocode, searchNeighborhood, type LookupResult, type Spot } from "./geocode";
+import { BUTTON } from "@/app/components/buttons";
 
 // Browser geolocation error codes → what to tell the user
 const GEO_ERRORS: Record<number, string> = {
@@ -80,7 +81,7 @@ export default function LocationPicker({ spot, onChange }: Props) {
         <button
           onClick={locateMe}
           disabled={busy}
-          className="flex h-10 items-center justify-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-card transition hover:bg-ink-soft disabled:opacity-50"
+          className={`${BUTTON.secondary} gap-2`}
         >
           <PinIcon />
           {locating ? "Finding you…" : "Use my location"}
@@ -98,12 +99,12 @@ export default function LocationPicker({ spot, onChange }: Props) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Neighborhood or address"
             aria-label="Neighborhood or address"
-            className="h-10 min-w-0 flex-1 rounded-full border border-line-strong bg-transparent px-4 text-[15px] outline-none transition placeholder:text-muted focus:border-ink"
+            className="h-9 min-w-0 flex-1 rounded-full border border-line-strong bg-transparent px-4 text-[15px] outline-none transition placeholder:text-muted focus:border-ink"
           />
           <button
             type="submit"
             disabled={busy || !query.trim()}
-            className="h-10 rounded-full border border-line-strong px-4 text-sm font-medium transition hover:border-ink disabled:opacity-40"
+            className={BUTTON.secondary}
           >
             {searching ? "…" : "Go"}
           </button>

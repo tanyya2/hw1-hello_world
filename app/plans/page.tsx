@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Plans" };
 const PER_PAGE = 12;
 
 const TAB = "rounded-full px-4 py-1.5 text-sm transition";
-const TAB_ON = `${TAB} bg-ink text-card`;
+const TAB_ON = `${TAB} bg-accent text-white`;
 const TAB_OFF = `${TAB} text-ink-soft hover:text-ink`;
 const PAGER = "rounded-full border border-line-strong px-4 py-1.5 text-sm transition hover:border-ink";
 const LABEL = "m-0 text-[13px] uppercase tracking-[0.12em] text-muted";
@@ -68,7 +68,7 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-10 sm:px-8">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-5 pt-4 pb-10 sm:px-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="m-0 font-serif text-4xl font-medium">Plans</h1>
         {userId && (

@@ -23,3 +23,23 @@ body {
   color: var(--color-ink);
   font-family: var(--font-inter), system-ui, sans-serif;
 }
+
+/* A soft cream glow behind text that sits on the map, so streets don't run through the words */
+.wash {
+  position: relative;
+  --wash: 0.95;
+}
+.wash::before {
+  content: "";
+  position: absolute;
+  inset: -48px -72px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgb(243 238 228 / var(--wash)) 60%, rgb(243 238 228 / 0));
+}
+.wash-soft {
+  --wash: 0.8;
+}
+.wash-softer {
+  --wash: 0.7;
+}

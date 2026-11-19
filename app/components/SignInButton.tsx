@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { ArrowBadge, BUTTON } from "./buttons";
 
 type Props = {
   // "outline" for the header, "primary" for big calls to action
@@ -12,8 +13,8 @@ type Props = {
 };
 
 const STYLES = {
-  outline: "gap-2.5 border border-ink px-4 py-2 text-[15px] hover:bg-card",
-  primary: "bg-accent px-7 py-4 font-semibold text-white hover:bg-[#174634]",
+  outline: `${BUTTON.secondary} gap-2.5`,
+  primary: BUTTON.primary,
 };
 
 // Google sign-in; Supabase sends the user back to /auth/callback
@@ -36,7 +37,7 @@ export default function SignInButton({ variant = "outline", next, children }: Pr
     <button
       onClick={signIn}
       disabled={loading}
-      className={`flex items-center justify-center rounded-full transition disabled:cursor-wait disabled:opacity-60 ${STYLES[variant]}`}
+      className={STYLES[variant]}
     >
       {variant === "outline" && (
         <svg viewBox="0 0 48 48" className="h-4 w-4" aria-hidden="true">
@@ -47,6 +48,7 @@ export default function SignInButton({ variant = "outline", next, children }: Pr
         </svg>
       )}
       {loading ? "Redirecting…" : (children ?? "Sign in")}
+      {variant === "primary" && <ArrowBadge />}
     </button>
   );
 }
