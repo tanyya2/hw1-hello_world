@@ -5,12 +5,14 @@ import { fetchCategory, fetchMix, type Place } from "./google";
 import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests, type Reservation } from "./googleLimit";
 import { GeminiBusyError, MODELS, askGemini, buildPrompt, parsePlan, type GeminiAttempt, type GeminiPlan, type Model } from "./gemini";
 import { BUDGETS, CATEGORIES, RADII_MILES, STOPS, inNyc, type Category } from "./nyc";
-import { walkingOrder } from "./walking";
+import { walkMinutes, walkingOrder } from "./walking";
 
 export type PlanInput = {
   lat: number;
   lon: number;
   label: string;
+  // The start is the user's own location (not a typed neighborhood or address)
+  myLocation?: boolean;
   radiusMiles: number;
   categories: Category[];
   purpose: string;
@@ -28,6 +30,9 @@ export type PlanStop = {
   name: string;
   category: Category;
   minutes: number;
+  // Our estimate of the walk here from the previous stop. None for the first stop: the start
+  // may be a whole neighborhood, not a real spot. None on older plans either.
+  walkMinutes?: number;
   note: string;
   miles?: number;
   address?: string | null;
@@ -272,11 +277,12 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
     // What we store: place id and name, plus Gemini's text
     const content: PlanContent = {
       title: result.title,
-      stops: picks.map(({ stop, place }) => ({
+      stops: picks.map(({ stop, place }, i) => ({
         placeId: place.id,
         name: place.name,
         category: place.category,
         minutes: stop.minutes,
+        walkMinutes: i > 0 ? walkMinutes(picks[i - 1].place, place) : undefined,
         note: stop.note,
       })),
       tip: result.tip,
@@ -287,8 +293,9 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       .from("plans")
       .insert({
         neighborhood: label,
-        // lat/lon: the starting point (already rounded to ~100 m), where Start walking begins
-        inputs: { lat, lon, radiusMiles, categories: chosen, purpose, budget, openNow },
+        // lat/lon: the starting point (already rounded to ~100 m). Start walking begins there
+        // only when it's the user's own location (myLocation), not the middle of a neighborhood.
+        inputs: { lat, lon, myLocation: input.myLocation === true, radiusMiles, categories: chosen, purpose, budget, openNow },
         // The candidates Gemini picked from: place ids only (Google's terms)
         places: places.map((place) => ({ id: place.id, category: place.category })),
         // The prompt and model that actually produced this plan

@@ -34,11 +34,17 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
 
   const plan = parseContent(row);
   const minutes = plan.stops.reduce((total, stop) => total + stop.minutes, 0);
+  // Walks between stops (older plans don't have them)
+  const walking = plan.stops.reduce((total, stop) => total + (stop.walkMinutes ?? 0), 0);
+  // Start walking begins at the user's own location; a neighborhood isn't a real spot,
+  // so then Google starts from wherever you are (or lets you type one)
+  const { lat, lon, myLocation } = row.inputs ?? {};
+  const start = myLocation && lat !== undefined && lon !== undefined ? { lat, lon } : undefined;
   const credited = plan.stops.some((stop) => stop.placeId);
   const author = authorOf(row);
   const date = new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   const facts = [
-    { label: "Time", value: formatDuration(minutes) },
+    { label: "Time", value: formatDuration(minutes + walking), note: walking > 0 ? `incl. ${walking} min walking` : null },
     { label: "Stops", value: String(plan.stops.length) },
     { label: "Budget", value: row.inputs?.budget || "—" },
   ];
@@ -59,13 +65,14 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
             <div key={fact.label} className={`flex flex-col gap-0.5 py-3 ${i > 0 ? "border-l border-line pl-5" : ""}`}>
               <dt className="text-xs text-muted">{fact.label}</dt>
               <dd className="m-0 font-serif text-xl">{fact.value}</dd>
+              {"note" in fact && fact.note && <dd className="m-0 text-xs text-muted">{fact.note}</dd>}
             </div>
           ))}
         </dl>
       </header>
 
       <div className="flex flex-wrap items-center gap-5">
-        <a href={walkingLink(plan.stops)} target="_blank" rel="noopener noreferrer" className={BUTTON.primarySmall}>
+        <a href={walkingLink(plan.stops, start)} target="_blank" rel="noopener noreferrer" className={BUTTON.primarySmall}>
           Start walking
           <ArrowBadge small />
         </a>
@@ -109,6 +116,10 @@ export default async function PlanPage({ params }: PageProps<"/plans/[id]">) {
                   Search on Google ↗
                 </a>
               </p>
+              {/* The walk to the next stop, on the dotted line */}
+              {plan.stops[i + 1]?.walkMinutes !== undefined && (
+                <p className="m-0 mt-4 text-xs text-accent">{plan.stops[i + 1].walkMinutes} min walk</p>
+              )}
             </div>
           </li>
         ))}

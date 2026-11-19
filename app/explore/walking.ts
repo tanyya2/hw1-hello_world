@@ -11,6 +11,11 @@ export function milesBetween(a: Point, b: Point) {
   return 2 * 3958.8 * Math.asin(Math.sqrt(h));
 }
 
+// Walking time estimate: streets add ~30% to the straight line, at 3 mph (20 min a mile)
+export function walkMinutes(a: Point, b: Point) {
+  return Math.max(1, Math.round(milesBetween(a, b) * 1.3 * 20));
+}
+
 // Night spots come after everything else: no bar before dinner, no club before a museum
 const LATE: Category[] = ["bars", "clubs"];
 

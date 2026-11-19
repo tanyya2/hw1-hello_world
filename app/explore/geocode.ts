@@ -16,7 +16,8 @@ const HEADERS = {
 
 const NYC_VIEWBOX = `${NYC.west},${NYC.north},${NYC.east},${NYC.south}`;
 
-export type Spot = { lat: number; lon: number; label: string };
+// `mine`: the device's location, not a typed neighborhood or address
+export type Spot = { lat: number; lon: number; label: string; mine?: boolean };
 export type LookupResult = { spot: Spot } | { error: string };
 
 type NominatimAddress = Partial<Record<"neighbourhood" | "quarter" | "suburb", string>>;
@@ -65,7 +66,7 @@ export async function reverseGeocode(lat: number, lon: number): Promise<LookupRe
     return { error: "Looks like you're outside NYC. Type a NYC neighborhood instead." };
   }
 
-  const spot = { lat: round(lat), lon: round(lon), label: "Your location" };
+  const spot = { lat: round(lat), lon: round(lon), label: "Your location", mine: true };
   const neighborhood = await nycNeighborhood(spot.lat, spot.lon);
   if (neighborhood) return { spot: { ...spot, label: neighborhood } };
 
