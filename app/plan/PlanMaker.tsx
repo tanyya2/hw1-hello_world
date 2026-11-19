@@ -41,6 +41,7 @@ export default function PlanMaker() {
           lat: spot.lat,
           lon: spot.lon,
           label: spot.label,
+          myLocation: spot.mine === true,
           radiusMiles: radius,
           categories,
           purpose,

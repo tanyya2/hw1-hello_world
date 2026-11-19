@@ -5,11 +5,14 @@ import { fetchCategory, fetchMix, type Place } from "./google";
 import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests, type Reservation } from "./googleLimit";
 import { GeminiBusyError, MODELS, askGemini, buildPrompt, parsePlan, type GeminiAttempt, type GeminiPlan, type Model } from "./gemini";
 import { BUDGETS, CATEGORIES, RADII_MILES, STOPS, inNyc, type Category } from "./nyc";
+import { walkMinutes, walkingOrder } from "./walking";
 
 export type PlanInput = {
   lat: number;
   lon: number;
   label: string;
+  // The start is the user's own location (not a typed neighborhood or address)
+  myLocation?: boolean;
   radiusMiles: number;
   categories: Category[];
   purpose: string;
@@ -27,6 +30,9 @@ export type PlanStop = {
   name: string;
   category: Category;
   minutes: number;
+  // Our estimate of the walk here from the previous stop. None for the first stop: the start
+  // may be a whole neighborhood, not a real spot. None on older plans either.
+  walkMinutes?: number;
   note: string;
   miles?: number;
   address?: string | null;
@@ -79,6 +85,24 @@ function checkStops(plan: GeminiPlan | null, places: Place[], picked: Category[]
     })
     .slice(0, max);
   return stops.length === Math.min(picked.length, max) ? { ...plan, stops } : null;
+}
+
+// A stop in Gemini's plan with its place
+type Pick = { stop: GeminiPlan["stops"][number]; place: Place };
+
+function picksOf(plan: GeminiPlan, places: Place[]): Pick[] {
+  return plan.stops.map((stop) => ({ stop, place: places[stop.place - 1] }));
+}
+
+// The stops (in this order, starting at `startedAt`) that close before you'd leave them:
+// time at each stop plus the walks between them
+function closingTooSoon(order: Pick[], startedAt: number) {
+  let time = startedAt;
+  return order.filter(({ stop, place }, i) => {
+    if (i > 0) time += walkMinutes(order[i - 1].place, place) * 60_000;
+    time += stop.minutes * 60_000;
+    return place.closesAt !== null && time > place.closesAt;
+  });
 }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -246,31 +270,53 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       return { error: `Not enough ${openNow ? "open " : ""}places nearby. Try a bigger distance or other categories.` };
     }
 
-    const prompt = buildPrompt({ start: label, purpose, budget }, places, picked);
+    // Open now on: the plan starts now, "Friday 8:30 PM" in New York (the server's clock may be
+    // elsewhere). Off: it's for some other time, so the time doesn't matter.
+    const now = openNow
+      ? new Date().toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", hour: "numeric", minute: "2-digit" })
+      : undefined;
+    let prompt = buildPrompt({ start: label, now, purpose, budget }, places, picked);
 
-    // If Gemini's plan breaks the rules (too few places, missing a category), ask once more
+    // Gemini picks the stops; we set the walking order. Open now on: every stop must still be
+    // open when you leave it, so orders where one closes first are out.
+    const startedAt = Date.now();
+    const fits = (order: Pick[]) => !openNow || closingTooSoon(order, startedAt).length === 0;
+    const placeOf = (pick: Pick) => pick.place;
+
+    // If Gemini's plan breaks the rules (too few places, missing a category) or no order keeps
+    // every stop open, ask once more (telling it which places close too soon)
     const models = await loadModels(supabase);
     let reply = await askGemini(prompt, attempts, models);
     let result = checkStops(parsePlan(reply.text, places.length), places, picked);
-    if (!result) {
+    let picks = result && walkingOrder({ lat, lon }, picksOf(result, places), placeOf, fits);
+    if (!picks) {
+      const tooSoon = result ? closingTooSoon(walkingOrder({ lat, lon }, picksOf(result, places), placeOf)!, startedAt) : [];
+      if (tooSoon.length > 0) {
+        const numbers = tooSoon.map(({ stop }) => stop.place).join(", ");
+        prompt += `\n\nThese places close before the outing would be over there, so don't pick them: ${numbers}.`;
+      }
       reply = await askGemini(prompt, attempts, models);
       result = checkStops(parsePlan(reply.text, places.length), places, picked);
+      picks = result && walkingOrder({ lat, lon }, picksOf(result, places), placeOf, fits);
     }
     if (!result) {
       console.error("generatePlan: unusable Gemini reply", reply.text);
       log.reason = "Gemini's reply broke the plan rules twice (wrong number of stops, a missing category or not JSON). Its replies are in LLM responses.";
       return { error: "Couldn't make a plan this time. Try again." };
     }
-
-    const picks = result.stops.map((stop) => ({ stop, place: places[stop.place - 1] }));
+    if (!picks) {
+      log.reason = "Twice, a stop in Gemini's plan closed before the outing would be over there, in every walking order.";
+      return { error: "Places nearby close too soon for a full plan. Try other categories or turn off Open now." };
+    }
     // What we store: place id and name, plus Gemini's text
     const content: PlanContent = {
       title: result.title,
-      stops: picks.map(({ stop, place }) => ({
+      stops: picks.map(({ stop, place }, i) => ({
         placeId: place.id,
         name: place.name,
         category: place.category,
         minutes: stop.minutes,
+        walkMinutes: i > 0 ? walkMinutes(picks[i - 1].place, place) : undefined,
         note: stop.note,
       })),
       tip: result.tip,
@@ -281,8 +327,9 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       .from("plans")
       .insert({
         neighborhood: label,
-        // lat/lon: the starting point (already rounded to ~100 m), where Start walking begins
-        inputs: { lat, lon, radiusMiles, categories: chosen, purpose, budget, openNow },
+        // lat/lon: the starting point (already rounded to ~100 m). Start walking begins there
+        // only when it's the user's own location (myLocation), not the middle of a neighborhood.
+        inputs: { lat, lon, myLocation: input.myLocation === true, radiusMiles, categories: chosen, purpose, budget, openNow },
         // The candidates Gemini picked from: place ids only (Google's terms)
         places: places.map((place) => ({ id: place.id, category: place.category })),
         // The prompt and model that actually produced this plan

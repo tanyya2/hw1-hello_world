@@ -1,4 +1,5 @@
 import { CATEGORIES, type Category } from "./nyc";
+import { milesBetween } from "./walking";
 
 // Google Places API (New), Nearby Search. Server-only: reads the API key.
 // Each request returns at most 20 places. Asking for ratings, prices or opening
@@ -17,6 +18,7 @@ const FIELDS = [
   "places.userRatingCount",
   "places.priceLevel",
   "places.currentOpeningHours.openNow",
+  "places.currentOpeningHours.nextCloseTime",
   "places.googleMapsUri",
 ].join(",");
 
@@ -40,6 +42,8 @@ export type Place = {
   // "$" to "$$$$", or null when Google doesn't know
   price: string | null;
   openNow: boolean | null;
+  // When it closes next (ms timestamp), if it's open now; null when Google doesn't say (e.g. open 24 hours)
+  closesAt: number | null;
   mapsUrl: string | null;
 };
 
@@ -54,7 +58,7 @@ type GooglePlace = {
   rating?: number;
   userRatingCount?: number;
   priceLevel?: string;
-  currentOpeningHours?: { openNow?: boolean };
+  currentOpeningHours?: { openNow?: boolean; nextCloseTime?: string };
   googleMapsUri?: string;
 };
 
@@ -66,16 +70,6 @@ const PRICES: Record<string, string> = {
   PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
-// Straight-line distance in miles, rounded to 0.1
-function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const rad = (deg: number) => (deg * Math.PI) / 180;
-  const a =
-    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
-    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
-  const miles = 2 * 3958.8 * Math.asin(Math.sqrt(a));
-  return Math.round(miles * 10) / 10;
-}
-
 // One Nearby Search request: the 20 most popular places matching `types` within
 // the radius (by distance alone, "parks" near a campus are its lawns)
 async function searchNearby(
@@ -84,22 +78,30 @@ async function searchNearby(
   lon: number,
   radiusMiles: number
 ) {
-  const res = await fetch(NEARBY, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": process.env.GOOGLE_MAPS_SERVER_KEY!,
-      "X-Goog-FieldMask": FIELDS,
-    },
-    body: JSON.stringify({
-      ...types,
-      maxResultCount: 20,
-      rankPreference: "POPULARITY",
-      locationRestriction: {
-        circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
+  const request = () =>
+    fetch(NEARBY, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": process.env.GOOGLE_MAPS_SERVER_KEY!,
+        "X-Goog-FieldMask": FIELDS,
       },
-    }),
-  });
+      body: JSON.stringify({
+        ...types,
+        maxResultCount: 20,
+        rankPreference: "POPULARITY",
+        locationRestriction: {
+          circle: { center: { latitude: lat, longitude: lon }, radius: Math.round(radiusMiles * METERS_PER_MILE) },
+        },
+      }),
+    });
+  let res = await request();
+  // Google's own error (5xx, "Please retry") is usually gone a moment later: try once more.
+  // Not for 4xx (bad key, over the limit), which a retry won't fix.
+  if (res.status >= 500) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    res = await request();
+  }
   if (!res.ok) throw new Error(`Google Places ${res.status}: ${await res.text()}`);
   const data: { places?: GooglePlace[] } = await res.json();
   return (data.places ?? []).filter((place) => place.displayName?.text);
@@ -113,13 +115,15 @@ function toPlace(place: GooglePlace, fits: Category[], lat: number, lon: number)
     fits,
     lat: place.location.latitude,
     lon: place.location.longitude,
-    miles: milesBetween(lat, lon, place.location.latitude, place.location.longitude),
+    // Straight line, rounded to 0.1
+    miles: Math.round(milesBetween({ lat, lon }, { lat: place.location.latitude, lon: place.location.longitude }) * 10) / 10,
     address: place.shortFormattedAddress ?? null,
     kind: place.primaryTypeDisplayName?.text ?? null,
     rating: place.rating ?? null,
     ratingCount: place.userRatingCount ?? null,
     price: (place.priceLevel && PRICES[place.priceLevel]) ?? null,
     openNow: place.currentOpeningHours?.openNow ?? null,
+    closesAt: place.currentOpeningHours?.nextCloseTime ? Date.parse(place.currentOpeningHours.nextCloseTime) : null,
     mapsUrl: place.googleMapsUri ?? null,
   };
 }

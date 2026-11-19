@@ -17,13 +17,14 @@ export function searchLink(stop: PlanStop) {
   return `https://www.google.com/search?${new URLSearchParams({ q: `${stop.name} ${stop.address ?? CITY}` })}`;
 }
 
-// Walking directions through every stop in order. No starting point: Google starts
-// from wherever you are, or leaves it empty to type (e.g. a shared link opened at home).
+// Walking directions from the plan's starting point through every stop in order.
+// No start (a neighborhood, or older plans): Google starts from wherever you are, or leaves it empty to type.
 // Google Maps (app or site) then does the turn-by-turn navigation.
-export function walkingLink(stops: PlanStop[]) {
+export function walkingLink(stops: PlanStop[], start?: { lat: number; lon: number }) {
   const last = stops[stops.length - 1];
   const middle = stops.slice(0, -1);
   const params = new URLSearchParams({ api: "1", travelmode: "walking", destination: `${last.name}, ${CITY}` });
+  if (start) params.set("origin", `${start.lat},${start.lon}`);
   if (last.placeId) params.set("destination_place_id", last.placeId);
   if (middle.length > 0) {
     params.set("waypoints", middle.map((stop) => `${stop.name}, ${CITY}`).join("|"));

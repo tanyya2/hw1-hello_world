@@ -9,8 +9,9 @@ export type PlanRow = {
   id: number;
   created_at: string;
   neighborhood: string | null;
-  // lat/lon: the starting point (plans from before it was saved don't have it)
-  inputs: { budget?: string; lat?: number; lon?: number } | null;
+  // lat/lon: the starting point (plans from before it was saved don't have it).
+  // myLocation: it's the user's own location, not a typed neighborhood or address.
+  inputs: { budget?: string; lat?: number; lon?: number; myLocation?: boolean } | null;
   content: string;
   profiles: { first_name: string | null; last_name: string | null } | { first_name: string | null; last_name: string | null }[] | null;
   votes: { user_id: string; value: number }[];
