@@ -36,15 +36,20 @@ export default function VoteButtons({ planId, initial, signedIn }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-end gap-2">
-      {error && <span className="mr-auto text-xs text-zinc-500">{error}</span>}
-      {!signedIn && <span className="mr-auto text-xs text-zinc-500">Sign in to vote</span>}
-      <VoteButton label="Upvote" count={tally.up} active={tally.mine === 1} disabled={!signedIn || pending} onClick={() => cast(1)}>
-        <path strokeLinejoin="round" d="M7 10v11H3V10h4zm0 0 4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.6 21H7" />
-      </VoteButton>
-      <VoteButton label="Downvote" count={tally.down} active={tally.mine === -1} disabled={!signedIn || pending} onClick={() => cast(-1)}>
-        <path strokeLinejoin="round" d="M17 14V3h4v11h-4zm0 0-4 8a2 2 0 0 1-2-2v-4H5a2 2 0 0 1-2-2.3l1.4-8A2 2 0 0 1 6.4 3H17" />
-      </VoteButton>
+    <div className="flex justify-end">
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2">
+          <VoteButton label="Upvote" count={tally.up} active={tally.mine === 1} disabled={!signedIn || pending} onClick={() => cast(1)}>
+            <path strokeLinejoin="round" d="M7 10v11H3V10h4zm0 0 4-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2.3l-1.4 8A2 2 0 0 1 17.6 21H7" />
+          </VoteButton>
+          <VoteButton label="Downvote" count={tally.down} active={tally.mine === -1} disabled={!signedIn || pending} onClick={() => cast(-1)}>
+            <path strokeLinejoin="round" d="M17 14V3h4v11h-4zm0 0-4 8a2 2 0 0 1-2-2v-4H5a2 2 0 0 1-2-2.3l1.4-8A2 2 0 0 1 6.4 3H17" />
+          </VoteButton>
+        </div>
+        {/* Under the buttons, centered */}
+        {error && <span className="text-center text-xs text-zinc-500">{error}</span>}
+        {!signedIn && <span className="text-xs text-zinc-500">Sign in to vote</span>}
+      </div>
     </div>
   );
 }
