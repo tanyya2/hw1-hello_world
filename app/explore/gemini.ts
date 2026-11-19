@@ -31,9 +31,8 @@ export type GeminiPlan = {
   tip: string;
 };
 
-// `required`: categories the user picked. Every plan has 3–4 stops (STOPS). Picked
-// categories: stops only from them, each at least once; more than 4 picked → the
-// best-fitting 4. None picked → mixed if possible.
+// `required`: categories the user picked. One stop from each of them; more than 4
+// picked → the best-fitting 4. None picked → 3–4 stops (STOPS), mixed if possible.
 // Ratings, prices and opening hours come from Google, so Gemini doesn't search.
 export function buildPrompt(request: PlanRequest, places: Place[], required: Category[]) {
   // Places grouped under category headings, numbered across the whole list
@@ -65,11 +64,9 @@ export function buildPrompt(request: PlanRequest, places: Place[], required: Cat
   const pick =
     required.length === 0
       ? `Pick ${count(min)} different places, from different categories when you can.`
-      : required.length === 1
-        ? `Pick ${count(min)} different places, all from ${labels[0]}.`
-        : required.length <= max
-          ? `Pick ${count(Math.max(min, required.length))} different places, only from ${labels.join(", ")}, with at least one from each of them.`
-          : `Pick exactly ${max} different places from ${max} different categories among ${labels.join(", ")}: the ones that fit the request best.`;
+      : required.length <= max
+        ? `Pick exactly ${required.length} different places, one from each of ${labels.join(", ")}.`
+        : `Pick exactly ${max} different places from ${max} different categories among ${labels.join(", ")}: the ones that fit the request best.`;
 
   return `You are planning an outing in New York City for a college student.
 
