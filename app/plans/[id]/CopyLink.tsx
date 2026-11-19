@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BUTTON } from "@/app/components/buttons";
 
 // Copies this plan's address so it can be shared
 export default function CopyLink() {
@@ -20,7 +21,7 @@ export default function CopyLink() {
     <button
       type="button"
       onClick={copy}
-      className="h-10 rounded-full border border-line-strong px-4 text-sm transition hover:border-ink"
+      className={BUTTON.secondarySmall}
     >
       {copied ? "Link copied ✓" : "Copy link"}
     </button>
