@@ -29,6 +29,10 @@ export default function PlanMaker() {
       setError("Pick where to start first.");
       return;
     }
+    if (categories.length === 1) {
+      setError("Pick at least 2 or none");
+      return;
+    }
     startLoading(async () => {
       let result: PlanResult;
       try {
@@ -107,7 +111,7 @@ export default function PlanMaker() {
         ))}
       </Row>
 
-      <Row label="Include">
+      <Row>
         {(Object.keys(CATEGORIES) as Category[]).map((category) => (
           <Chip
             key={category}
@@ -179,11 +183,11 @@ export default function PlanMaker() {
   );
 }
 
-// A label with its options on one line (wraps on small screens)
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+// Options on one line, with an optional label (wraps on small screens)
+function Row({ label, children }: { label?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      <span className="mr-1 text-sm text-muted">{label}</span>
+      {label && <span className="mr-1 text-sm text-muted">{label}</span>}
       {children}
     </div>
   );

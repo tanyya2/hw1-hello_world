@@ -188,9 +188,11 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
   if (!BUDGETS.includes(budget as (typeof BUDGETS)[number])) return { error: "Pick a budget." };
   if (purpose.length > 200) return { error: "Keep \"What for\" under 200 characters." };
 
-  // No categories picked → a mix of everything, and Gemini decides what fits
+  // No categories picked → a mix of everything, and Gemini decides what fits.
+  // Just one isn't a plan (that's a list of spots), so it takes 2 or more
   const chosen = [...new Set(input.categories ?? [])].filter((category) => category in CATEGORIES);
   const categories = chosen.length > 0 ? chosen : (Object.keys(CATEGORIES) as Category[]);
+  if (chosen.length === 1) return { error: "Pick at least 2 or none" };
 
   const reserved = await reserveGoogleRequests(supabase, 1);
   if (reserved !== "ok") return notReserved(reserved, log);

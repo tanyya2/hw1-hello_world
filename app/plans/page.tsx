@@ -107,11 +107,11 @@ export default async function Plans({ searchParams }: PageProps<"/plans">) {
 
       {pages > 1 && (
         <nav className="flex items-center justify-between">
-          {page > 1 ? <Link href={href(page - 1)} className={PAGER}>← Newer</Link> : <span />}
+          {page > 1 ? <Link href={href(page - 1)} className={PAGER}>← Previous</Link> : <span />}
           <span className="text-sm text-muted">
             Page {Math.min(page, pages)} of {pages}
           </span>
-          {page < pages ? <Link href={href(page + 1)} className={PAGER}>Older →</Link> : <span />}
+          {page < pages ? <Link href={href(page + 1)} className={PAGER}>Next →</Link> : <span />}
         </nav>
       )}
     </main>
