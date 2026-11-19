@@ -84,7 +84,6 @@ export default async function Landing({ userId }: { userId: string | null }) {
 
       <footer className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-4 px-5 py-5 text-[10.5px] text-muted opacity-75 sm:px-8 lg:px-12">
         <span>© {new Date().getFullYear()} OutNYC</span>
-        <span>Map data © OpenStreetMap contributors</span>
       </footer>
     </main>
   );
