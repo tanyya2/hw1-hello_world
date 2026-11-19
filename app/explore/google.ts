@@ -1,4 +1,5 @@
 import { CATEGORIES, type Category } from "./nyc";
+import { milesBetween } from "./walking";
 
 // Google Places API (New), Nearby Search. Server-only: reads the API key.
 // Each request returns at most 20 places. Asking for ratings, prices or opening
@@ -66,16 +67,6 @@ const PRICES: Record<string, string> = {
   PRICE_LEVEL_VERY_EXPENSIVE: "$$$$",
 };
 
-// Straight-line distance in miles, rounded to 0.1
-function milesBetween(lat1: number, lon1: number, lat2: number, lon2: number) {
-  const rad = (deg: number) => (deg * Math.PI) / 180;
-  const a =
-    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
-    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
-  const miles = 2 * 3958.8 * Math.asin(Math.sqrt(a));
-  return Math.round(miles * 10) / 10;
-}
-
 // One Nearby Search request: the 20 most popular places matching `types` within
 // the radius (by distance alone, "parks" near a campus are its lawns)
 async function searchNearby(
@@ -113,7 +104,8 @@ function toPlace(place: GooglePlace, fits: Category[], lat: number, lon: number)
     fits,
     lat: place.location.latitude,
     lon: place.location.longitude,
-    miles: milesBetween(lat, lon, place.location.latitude, place.location.longitude),
+    // Straight line, rounded to 0.1
+    miles: Math.round(milesBetween({ lat, lon }, { lat: place.location.latitude, lon: place.location.longitude }) * 10) / 10,
     address: place.shortFormattedAddress ?? null,
     kind: place.primaryTypeDisplayName?.text ?? null,
     rating: place.rating ?? null,

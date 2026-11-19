@@ -78,7 +78,7 @@ Request:
 Nearby places, with their Google rating and price (choose only from these, by number):
 ${list}
 
-${pick} Choose the places that best fit what it's for and the budget, prefer well-rated ones, and put them in a sensible walking order.
+${pick} Choose the places that best fit what it's for and the budget, prefer well-rated ones. We put the stops in walking order ourselves, so don't mention their order in the notes.
 
 Give each stop a realistic number of minutes for that kind of place and what the person will do there. Typical times: coffee or dessert 20–40, bookstore 20–45, restaurant 45–75, bar 45–90, club 60–120, park 30–60, museum or gallery 60–120.
 

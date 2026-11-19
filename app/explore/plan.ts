@@ -5,6 +5,7 @@ import { fetchCategory, fetchMix, type Place } from "./google";
 import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests, type Reservation } from "./googleLimit";
 import { GeminiBusyError, MODELS, askGemini, buildPrompt, parsePlan, type GeminiAttempt, type GeminiPlan, type Model } from "./gemini";
 import { BUDGETS, CATEGORIES, RADII_MILES, STOPS, inNyc, type Category } from "./nyc";
+import { walkingOrder } from "./walking";
 
 export type PlanInput = {
   lat: number;
@@ -262,7 +263,12 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       return { error: "Couldn't make a plan this time. Try again." };
     }
 
-    const picks = result.stops.map((stop) => ({ stop, place: places[stop.place - 1] }));
+    // Gemini picks the stops; we set the walking order
+    const picks = walkingOrder(
+      { lat, lon },
+      result.stops.map((stop) => ({ stop, place: places[stop.place - 1] })),
+      (pick) => pick.place,
+    );
     // What we store: place id and name, plus Gemini's text
     const content: PlanContent = {
       title: result.title,
