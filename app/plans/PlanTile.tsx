@@ -46,10 +46,14 @@ export default function PlanTile({ id, plan, meta, votes, signedIn, rank }: Prop
         ))}
       </ol>
 
-      {/* Above the card-wide link, so the buttons get the clicks */}
-      <div className="relative z-10 mt-auto pt-1">
-        {/* Keyed by the counts: after a vote refreshes the page, every copy of this plan shows the new numbers */}
-        <VoteButtons key={`${votes.up}:${votes.down}:${votes.mine}`} planId={id} initial={votes} signedIn={signedIn} />
+      <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+        {/* Google's terms: credit Google Maps next to its place data (plans from before the Google switch have none) */}
+        {plan.stops.some((stop) => stop.placeId) && <p className="text-xs text-muted/70">Google Maps</p>}
+        {/* Above the card-wide link, so the buttons get the clicks */}
+        <div className="relative z-10 ml-auto">
+          {/* Keyed by the counts: after a vote refreshes the page, every copy of this plan shows the new numbers */}
+          <VoteButtons key={`${votes.up}:${votes.down}:${votes.mine}`} planId={id} initial={votes} signedIn={signedIn} />
+        </div>
       </div>
     </article>
   );

@@ -17,7 +17,8 @@ export function searchLink(stop: PlanStop) {
   return `https://www.google.com/search?${new URLSearchParams({ q: `${stop.name} ${stop.address ?? CITY}` })}`;
 }
 
-// Walking directions from wherever you are through every stop in order.
+// Walking directions through every stop in order. No starting point: Google starts
+// from wherever you are, or leaves it empty to type (e.g. a shared link opened at home).
 // Google Maps (app or site) then does the turn-by-turn navigation.
 export function walkingLink(stops: PlanStop[]) {
   const last = stops[stops.length - 1];
