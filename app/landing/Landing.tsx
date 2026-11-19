@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import type { PlanContent } from "@/app/explore/plan";
 import SignInButton from "@/app/components/SignInButton";
-import { ArrowBadge, PRIMARY_BUTTON } from "@/app/components/buttons";
+import { ArrowBadge, BUTTON } from "@/app/components/buttons";
 import { parseContent, topPlans } from "@/app/plans/top";
 import MapBackground from "./MapBackground";
 
@@ -44,7 +44,7 @@ export default async function Landing({ userId }: { userId: string | null }) {
           </p>
           <div className="flex flex-wrap items-center gap-6">
             {userId ? (
-              <Link href="/plan" className={PRIMARY_BUTTON}>
+              <Link href="/plan" className={BUTTON.primary}>
                 Make my plan
                 <ArrowBadge />
               </Link>

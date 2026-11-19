@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { ArrowBadge, BUTTON } from "@/app/components/buttons";
 import { saveName } from "./actions";
 
 export const metadata: Metadata = { title: "Welcome" };
@@ -35,8 +36,9 @@ export default async function Welcome() {
           <input name="last_name" required defaultValue={profile?.last_name ?? ""} className={inputClass} />
         </label>
 
-        <button className="rounded-full bg-black px-4 py-2 text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200">
+        <button className={`${BUTTON.primary} self-center`}>
           Continue
+          <ArrowBadge />
         </button>
       </form>
     </main>

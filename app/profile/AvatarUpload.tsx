@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/client";
+import { BUTTON } from "@/app/components/buttons";
 
 type Props = {
   userId: string;
@@ -65,7 +66,7 @@ export default function AvatarUpload({ userId, avatarUrl, initials }: Props) {
       )}
 
       <div className="flex flex-col gap-1">
-        <label className="cursor-pointer rounded-full border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900">
+        <label className={`${BUTTON.secondary} cursor-pointer`}>
           {uploading ? "Uploading…" : avatarUrl ? "Change photo" : "Upload photo"}
           <input
             type="file"

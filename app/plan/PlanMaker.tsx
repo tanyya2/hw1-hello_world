@@ -7,6 +7,7 @@ import LocationPicker from "@/app/explore/LocationPicker";
 import type { Spot } from "@/app/explore/geocode";
 import { BUDGETS, CATEGORIES, RADII_MILES, type Category } from "@/app/explore/nyc";
 import { generatePlan, type PlanResult } from "@/app/explore/plan";
+import { ArrowBadge, BUTTON } from "@/app/components/buttons";
 
 const IDEAS = ["Coffee and books", "Cheap date", "Quick lunch", "Night out"];
 
@@ -164,9 +165,10 @@ export default function PlanMaker() {
           type="button"
           onClick={makePlan}
           disabled={loading}
-          className="h-12 rounded-full bg-accent px-8 text-base font-semibold text-white transition hover:bg-[#174634] disabled:cursor-wait disabled:opacity-60"
+          className={BUTTON.primary}
         >
           {loading ? "Making your plan…" : "Make my plan"}
+          <ArrowBadge />
         </button>
         {error && (
           <p role="alert" className="m-0 text-sm text-ink-soft">

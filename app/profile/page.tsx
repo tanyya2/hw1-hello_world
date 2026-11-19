@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { BUTTON } from "@/app/components/buttons";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -48,7 +49,7 @@ export default async function Profile() {
 
         <Link
           href="/profile/edit"
-          className="mt-2 rounded-full border border-zinc-300 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          className={`${BUTTON.secondary} mt-2`}
         >
           Edit profile
         </Link>

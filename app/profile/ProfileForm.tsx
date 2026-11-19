@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { BUTTON } from "@/app/components/buttons";
 import { updateProfile } from "./actions";
 
 const inputClass =
@@ -36,13 +37,13 @@ export default function ProfileForm({ firstName, lastName, bio }: Props) {
       <div className="flex gap-3">
         <Link
           href="/profile"
-          className="flex-1 rounded-full border border-zinc-300 px-4 py-2 text-center hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-900"
+          className={`${BUTTON.secondary} flex-1`}
         >
           Cancel
         </Link>
         <button
           disabled={pending}
-          className="flex-1 rounded-full bg-black px-4 py-2 text-white hover:bg-zinc-800 disabled:opacity-60 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+          className={`${BUTTON.primarySmallPlain} flex-1`}
         >
           {pending ? "Saving…" : "Save"}
         </button>
