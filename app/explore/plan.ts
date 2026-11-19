@@ -273,7 +273,8 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       .from("plans")
       .insert({
         neighborhood: label,
-        inputs: { radiusMiles, categories: chosen, purpose, budget, openNow },
+        // lat/lon: the starting point (already rounded to ~100 m), where Start walking begins
+        inputs: { lat, lon, radiusMiles, categories: chosen, purpose, budget, openNow },
         // The candidates Gemini picked from: place ids only (Google's terms)
         places: places.map((place) => ({ id: place.id, category: place.category })),
         // The prompt and model that actually produced this plan
