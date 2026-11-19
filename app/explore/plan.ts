@@ -69,25 +69,16 @@ function checkStops(plan: GeminiPlan | null, places: Place[], picked: Category[]
     return stops.length >= min ? { ...plan, stops } : null;
   }
 
-  stops = stops.filter((stop) => picked.includes(categoryOf(stop)));
-
-  // More picked than stops fit: `max` places, each from a different picked category
-  if (picked.length > max) {
-    const seen = new Set<Category>();
-    stops = stops
-      .filter((stop) => {
-        if (seen.has(categoryOf(stop))) return false;
-        seen.add(categoryOf(stop));
-        return true;
-      })
-      .slice(0, max);
-    return stops.length === max ? { ...plan, stops } : null;
-  }
-
-  // Otherwise: only picked categories, each at least once
-  stops = stops.slice(0, max);
-  const covered = picked.every((category) => stops.some((stop) => categoryOf(stop) === category));
-  return stops.length >= Math.max(min, picked.length) && covered ? { ...plan, stops } : null;
+  // Picked: one place from each picked category (more than `max` picked → `max` of them)
+  const seen = new Set<Category>();
+  stops = stops
+    .filter((stop) => {
+      if (!picked.includes(categoryOf(stop)) || seen.has(categoryOf(stop))) return false;
+      seen.add(categoryOf(stop));
+      return true;
+    })
+    .slice(0, max);
+  return stops.length === Math.min(picked.length, max) ? { ...plan, stops } : null;
 }
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -249,6 +240,11 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
       };
     }
     const picked = chosen.filter((category) => places.some((place) => place.category === category));
+    // More than 4 picked, but only one of them has places nearby: that's not a plan either
+    if (picked.length === 1) {
+      log.reason = foundNote;
+      return { error: `Not enough ${openNow ? "open " : ""}places nearby. Try a bigger distance or other categories.` };
+    }
 
     const prompt = buildPrompt({ start: label, purpose, budget }, places, picked);
 
