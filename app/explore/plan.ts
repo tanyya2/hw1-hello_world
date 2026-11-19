@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { fetchCategory, fetchMix, type Place } from "./google";
-import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests } from "./googleLimit";
+import { GOOGLE_LIMIT_ERROR, reserveGoogleRequests, type Reservation } from "./googleLimit";
 import { GeminiBusyError, MODELS, askGemini, buildPrompt, parsePlan, type GeminiAttempt, type GeminiPlan, type Model } from "./gemini";
 import { BUDGETS, CATEGORIES, RADII_MILES, STOPS, inNyc, type Category } from "./nyc";
 
@@ -170,6 +170,14 @@ async function logRequest(supabase: Supabase, input: PlanInput, result: PlanResu
   }
 }
 
+// No Google requests reserved: today's cap is used up, or it couldn't be checked.
+// Couldn't check → no Google search either (it wouldn't be counted), and the real error goes to the log
+function notReserved(reservation: Exclude<Reservation, "ok">, log: RunLog): PlanResult {
+  if (reservation === "limit") return { error: GOOGLE_LIMIT_ERROR };
+  log.reason = `Couldn't check the Google limit: ${reservation.error}`;
+  return { error: "Couldn't make a plan right now. Try again in a moment." };
+}
+
 async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Promise<PlanResult> {
   const { attempts } = log;
   const { lat, lon, radiusMiles, budget } = input;
@@ -184,7 +192,8 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
   const chosen = [...new Set(input.categories ?? [])].filter((category) => category in CATEGORIES);
   const categories = chosen.length > 0 ? chosen : (Object.keys(CATEGORIES) as Category[]);
 
-  if (!(await reserveGoogleRequests(supabase, 1))) return { error: GOOGLE_LIMIT_ERROR };
+  const reserved = await reserveGoogleRequests(supabase, 1);
+  if (reserved !== "ok") return notReserved(reserved, log);
 
   try {
     // One Google request: the 20 most popular places nearby across all the categories
@@ -205,7 +214,8 @@ async function makePlan(supabase: Supabase, input: PlanInput, log: RunLog): Prom
     fillMissing(places, missingFrom(places));
     const missing = missingFrom(places);
     if (missing.length > 0) {
-      if (!(await reserveGoogleRequests(supabase, missing.length))) return { error: GOOGLE_LIMIT_ERROR };
+      const reservedMore = await reserveGoogleRequests(supabase, missing.length);
+      if (reservedMore !== "ok") return notReserved(reservedMore, log);
       const extra = (await Promise.all(missing.map((category) => fetchCategory(category, lat, lon, radiusMiles)))).flat();
       const seen = new Set(found.map((place) => place.id));
       const fresh = extra.filter((place) => !seen.has(place.id));
